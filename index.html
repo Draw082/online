@@ -1,0 +1,1949 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中山韵典在线</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary-color: #2c5530;
+            --secondary-color: #739e6f;
+            --accent-color: #d4b483;
+            --light-color: #f8f5f0;
+            --dark-color: #1a1a1a;
+            --gray-color: #6c757d;
+            --white: #fff;
+            --shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        body {
+            background-color: #f9f9f9;
+            color: #333;
+            line-height: 1.6;
+            font-family: "楷体", "STKaiti", "KaiTi", serif;
+        }
+        
+        /* 宋体应用于非隶书、楷书的汉字元素 - 只针对最初版本不是楷体的元素 */
+        .character-title, .search-examples, .example-word,
+        .footer-section p, .copyright p, .no-results p, .page-placeholder p {
+            font-family: "宋体", "SimSun", "NSimSun", serif;
+        }
+        
+        /* 拼音/英文字母使用无衬线字体，不受影响 */
+        .pinyin-text, .entry-pinyin, .search-input, .search-btn,
+        .search-mode-select, .search-mode-label, .mode-description,
+        .header-info, .logo-text p {
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        
+        /* 保留隶书用于logo */
+        .logo-text h1 {
+            font-family: "隶书", "LiSu", "STLiti", serif;
+        }
+        
+        /* 保留楷体用于特定元素 - 包括词条、释义、例句 */
+        .nav-menu a, .section-title, body,
+        .meaning-item, .entry-title, .entry-definition,
+        .example-dialect, .example-translation, .page-content,
+        .search-title {
+            font-family: "楷体", "STKaiti", "KaiTi", serif;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        /* 头部样式 */
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .logo-icon {
+            font-size: 2.5rem;
+            color: var(--accent-color);
+        }
+        
+        .logo-text h1 {
+            font-size: 2.2rem;
+            margin-bottom: 5px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+        
+        .logo-text p {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .header-info {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 1rem;
+        }
+        
+        /* 导航菜单 - 始终保持横向排列 */
+        nav {
+            background-color: var(--secondary-color);
+            padding: 0.8rem 0;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        
+        .nav-container {
+            display: flex;
+            justify-content: center;
+            min-width: max-content;
+        }
+        
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            gap: 30px;
+            padding: 0 10px;
+        }
+        
+        .nav-menu li {
+            position: relative;
+        }
+        
+        .nav-menu a {
+            color: white;
+            text-decoration: none;
+            font-size: 1.1rem;
+            padding: 8px 15px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+        
+        .nav-menu a:hover, .nav-menu a.active {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        /* 搜索区域 */
+        .search-section {
+            padding: 3rem 0;
+            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
+            color: white;
+            text-align: center;
+        }
+        
+        .search-title {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .search-box {
+            max-width: 700px;
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 18px 25px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .search-btn {
+            position: absolute;
+            right: 8px;
+            top: 8px;
+            background-color: var(--accent-color);
+            color: var(--primary-color);
+            border: none;
+            border-radius: 50px;
+            padding: 12px 30px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .search-btn:hover {
+            background-color: #e0a95c;
+            transform: translateY(-2px);
+        }
+        
+        /* 搜索模式选择 */
+        .search-mode-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 15px;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .search-mode-label {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .search-mode-select {
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: none;
+            background-color: rgba(255, 255, 255, 0.9);
+            color: var(--primary-color);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .search-mode-select:hover {
+            background-color: white;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .mode-description {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 5px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .search-examples {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .example-word {
+            display: inline-block;
+            margin: 0 8px;
+            padding: 5px 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .example-word:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        /* 主要内容区域 */
+        .main-content {
+            padding: 3rem 0;
+        }
+        
+        /* 搜索结果区域 */
+        .results-section {
+            background-color: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--accent-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-title i {
+            color: var(--secondary-color);
+        }
+        
+        .results-container {
+            min-height: 300px;
+        }
+        
+        .character-item {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .character-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .character-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .character-title {
+            font-size: 2rem;
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+        
+        /* 拼音样式 */
+        .pinyin-container {
+            margin: 15px 0;
+        }
+        
+        .pinyin-item {
+            margin-bottom: 20px;
+            padding-left: 15px;
+            border-left: 3px solid var(--secondary-color);
+        }
+        
+        .pinyin-text {
+            font-size: 1.2rem;
+            color: var(--secondary-color);
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        
+        /* 释义和词条样式 */
+        .meaning-container {
+            margin: 10px 0;
+        }
+        
+        .meaning-item {
+            margin-bottom: 8px;
+            padding: 5px 0;
+        }
+        
+        .entry-container {
+            margin: 15px 0;
+        }
+        
+        .entry-item {
+            margin: 10px 0;
+            padding: 12px;
+            background-color: #f5f9f5;
+            border-radius: 5px;
+            border-left: 4px solid var(--accent-color);
+        }
+        
+        .entry-title {
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+            font-size: 1.1rem;
+        }
+        
+        .entry-pinyin {
+            color: var(--secondary-color);
+            margin-bottom: 5px;
+            font-size: 1rem;
+        }
+        
+        .entry-definition {
+            color: #444;
+            margin-top: 5px;
+        }
+        
+        .example-container {
+            margin: 15px 0 0 15px;
+            padding: 10px;
+            background-color: #f9f7f2;
+            border-radius: 5px;
+            font-style: italic;
+            color: #555;
+        }
+        
+        .example-dialect {
+            margin-bottom: 5px;
+        }
+        
+        .example-translation {
+            font-size: 0.9rem;
+            color: #777;
+            border-top: 1px dashed #ddd;
+            padding-top: 5px;
+        }
+        
+        /* 注意和语法点样式 */
+        .note-container {
+            margin: 15px 0;
+            padding: 12px;
+            background-color: #f0f8ff;
+            border-radius: 5px;
+            border-left: 4px solid #4a90e2;
+        }
+        
+        .note-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 1.1rem;
+        }
+        
+        .note-content {
+            color: #34495e;
+            margin-top: 5px;
+        }
+        
+        /* 儿化音特殊样式 - 匹配儿'整体替换为小字儿，底部持平 */
+        .erhua-char {
+            display: inline-block;
+            font-size: 0.6em; /* 儿化小字尺寸 */
+            color: #666;
+            margin-left: -0.1em; /* 贴近前一个汉字，减少间距 */
+            vertical-align: bottom; /* 核心：与前一字底部持平 */
+            line-height: 1; /* 取消行高干扰 */
+            transform: scale(0.85); /* 轻微缩小优化视觉 */
+            transform-origin: bottom right; /* 变形原点定位准确 */
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--gray-color);
+        }
+        
+        .no-results i {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: #ddd;
+        }
+        
+        /* 高亮样式 */
+        .highlight {
+            background-color: #fffacd;
+            padding: 0 2px;
+            border-radius: 3px;
+            font-weight: bold;
+            color: #d35400;
+        }
+        
+        /* 页脚 */
+        footer {
+            background-color: var(--dark-color);
+            color: #bbb;
+            padding: 2rem 0 1.5rem;
+            margin-top: 2rem;
+            text-align: center;
+        }
+        
+        .footer-content {
+            margin-bottom: 20px;
+        }
+        
+        .footer-section h4 {
+            color: white;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            font-family: "楷体", "STKaiti", "KaiTi", serif;
+        }
+        
+        .footer-section p {
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .copyright {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid #444;
+            font-size: 0.9rem;
+            color: #888;
+        }
+        
+        /* 其他页面样式 */
+        .page-content {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+        }
+        
+        .page-placeholder {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--gray-color);
+        }
+        
+        .page-placeholder i {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            color: #ddd;
+        }
+        
+        .page-placeholder h2 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            font-family: "楷体", "STKaiti", "KaiTi", serif;
+        }
+
+        /* 新增：语法弹窗样式 - 核心自定义UI */
+        .grammar-modal-mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .grammar-modal-mask.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .grammar-modal-box {
+            background: var(--white);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+        .grammar-modal-icon {
+            font-size: 2.5rem;
+            color: var(--secondary-color);
+            margin-bottom: 1rem;
+        }
+        .grammar-modal-title {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            font-family: "楷体", "STKaiti", "KaiTi", serif;
+        }
+        .grammar-modal-desc {
+            font-size: 1.1rem;
+            color: #555;
+            line-height: 1.8;
+            margin-bottom: 2rem;
+            font-family: "宋体", "SimSun", "NSimSun", serif;
+        }
+        .grammar-modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        .modal-btn {
+            padding: 10px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: "楷体", "STKaiti", "KaiTi", serif;
+        }
+        .modal-btn-confirm {
+            background-color: var(--primary-color);
+            color: var(--white);
+        }
+        .modal-btn-confirm:hover {
+            background-color: #234426;
+            transform: translateY(-2px);
+        }
+        .modal-btn-cancel {
+            background-color: #eee;
+            color: var(--gray-color);
+        }
+        .modal-btn-cancel:hover {
+            background-color: #ddd;
+            transform: translateY(-2px);
+        }
+        
+        /* 修复：极简404页面样式 - 全屏、仅保留404大字 */
+        .page-404 {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #f9f9f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9998;
+            display: none;
+        }
+        .page-404.active {
+            display: flex;
+        }
+        .page-404 h1 {
+            font-size: 8rem;
+            color: var(--primary-color);
+            font-family: "宋体", "SimSun", serif;
+        }
+        
+        /* 响应式设计 - 导航栏始终横向排列 + 弹窗适配 + 极简404适配 */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
+            }
+            
+            .nav-menu {
+                gap: 15px;
+            }
+            
+            .search-title {
+                font-size: 1.6rem;
+            }
+            
+            .search-mode-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .grammar-modal-box {
+                padding: 1.5rem;
+            }
+            .grammar-modal-title {
+                font-size: 1.3rem;
+            }
+            .grammar-modal-desc {
+                font-size: 1rem;
+            }
+
+            /* 极简404响应式 */
+            .page-404 h1 {
+                font-size: 5rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .search-input {
+                padding: 15px 20px;
+                font-size: 1rem;
+            }
+            
+            .search-btn {
+                padding: 10px 20px;
+                position: relative;
+                right: 0;
+                top: 0;
+                margin-top: 15px;
+                width: 100%;
+            }
+            
+            .search-box {
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .character-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            /* 导航栏在小屏幕上可水平滚动 */
+            nav {
+                padding: 0.5rem 0;
+            }
+            
+            .nav-menu {
+                gap: 10px;
+                padding: 0 5px;
+            }
+            
+            .nav-menu a {
+                font-size: 1rem;
+                padding: 6px 12px;
+            }
+
+            .grammar-modal-buttons {
+                flex-direction: column;
+            }
+            .modal-btn {
+                width: 100%;
+                padding: 12px 0;
+            }
+
+            /* 极简404响应式 */
+            .page-404 h1 {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 头部 -->
+    <header>
+        <div class="container header-content">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-book-open"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>中山韵典在线</h1>
+                    <p>定州方言查询平台</p>
+                </div>
+            </div>
+            <div class="header-info">
+                <p style="font-family: 'Times New Roman', Times, serif;">Dingzhou Dialect Dictionary Online</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- 导航菜单 -->
+    <nav>
+        <div class="container nav-container">
+            <ul class="nav-menu">
+                <li><a href="#home" class="active" id="nav-home"><i class="fas fa-home"></i> 首页</a></li>
+                <li><a href="#grammar" id="nav-grammar"><i class="fas fa-language"></i> 语法</a></li>
+                <li><a href="https://comfy-lebkuchen-174b53.netlify.app/" target="_blank" id="nav-challenge"><i class="fas fa-gamepad"></i> 闯关</a></li>
+                <li><a href="#about" id="nav-about"><i class="fas fa-info-circle"></i> 关于</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- 新增：语法弹窗DOM - 自定义UI -->
+    <div class="grammar-modal-mask" id="grammarModal">
+        <div class="grammar-modal-box">
+            <div class="grammar-modal-icon">
+                <i class="fas fa-file-pdf"></i>
+            </div>
+            <h3 class="grammar-modal-title">定州方言语法扼要</h3>
+            <p class="grammar-modal-desc">您将进入《定州方言语法扼要》（半成品）的PDF文件阅览界面，点击“确认”后查看。</p>
+            <div class="grammar-modal-buttons">
+                <button class="modal-btn modal-btn-confirm" id="modalConfirm">确认</button>
+                <button class="modal-btn modal-btn-cancel" id="modalCancel">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 首页内容 -->
+    <div id="home-page" class="page">
+        <!-- 搜索区域 -->
+        <section class="search-section">
+            <div class="container">
+                <h2 class="search-title">在《中山韵典》中查询</h2>
+                <div class="search-box">
+                    <input type="text" class="search-input" id="searchInput" placeholder="输入简体汉字或拼音以查询">
+                    <button class="search-btn" id="searchBtn">
+                        <i class="fas fa-search"></i> 搜索
+                    </button>
+                </div>
+                
+                <!-- 搜索模式选择 -->
+                <div class="search-mode-container">
+                    <div class="search-mode-label">搜索模式：</div>
+                    <select class="search-mode-select" id="searchMode">
+                        <option value="default">默认模式</option>
+                        <option value="reverse">反查模式</option>
+                    </select>
+                </div>
+                
+                <div class="mode-description" id="modeDescription">
+                    默认模式：仅支持按定州方言查询。反查模式：支持按定州方言查询和通过释义反查。
+                </div>
+                
+                <div class="search-examples">
+                    试试搜索：
+                    <span class="example-word" data-word="阿">阿</span>
+                    <span class="example-word" data-word="包">包</span>
+                    <span class="example-word" data-word="爱">爱</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 搜索结果 -->
+        <div class="container main-content">
+            <section class="results-section">
+                <h2 class="section-title">
+                    <i class="fas fa-list-alt"></i> 查询结果
+                </h2>
+                <div class="results-container" id="resultsContainer">
+                    <!-- 初始状态显示提示 -->
+                    <div class="no-results" id="initialMessage">
+                        <i class="fas fa-search"></i>
+                        <h3>欢迎使用中山韵典在线</h3>
+                        <p>请输入定州方言字词或拼音进行查询，结果将显示在这里</p>
+                        <p style="margin-top: 15px; font-size: 0.9rem; color: #777;">
+                           当前为测试数据库，大量内容尚未上传！<br>
+                            支持无声调拼音搜索。<br>
+                            支持输入ng以匹配到ŋ。<br>
+                            提供“默认模式”和“反查模式”两种搜索方式
+                        </p>
+                    </div>
+                    
+                    <!-- 搜索结果将动态插入到这里 -->
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- 语法特点页面（保留DOM，弹窗替代显示） -->
+    <div id="grammar-page" class="page" style="display: none;">
+        <div class="container main-content">
+            <section class="page-content">
+                <h2 class="section-title">
+                    <i class="fas fa-language"></i> 定州方言语法特点
+                </h2>
+                <div class="page-placeholder">
+                    <i class="fas fa-code-branch"></i>
+                    <h2>语法板块正在建设中</h2>
+                    <p>语法板块正在建设中</p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- 关于项目页面 -->
+    <div id="about-page" class="page" style="display: none;">
+        <div class="container main-content">
+            <section class="page-content">
+                <h2 class="section-title">
+                    <i class="fas fa-info-circle"></i> 关于本站
+                </h2>
+                <div style="line-height: 1.8;">
+                    <h3>《中山韵典》介绍</h3>
+                    <p>《中山韵典》是一部收录和解释定州方言的工具书，目前仍在编纂中。</p>
+                    
+                    <h3 style="margin-top: 25px;">平台介绍</h3>
+                    <p>1. 本平台基于《中山韵典》收录定州方言字、词、句。</p>
+                    <p>2. 本平台众多内容尚未完善，请等待后续开发。</p>
+                    <p>3.目前内容仅是测试内容，方言数据库仍在处理中。</p>
+                    <p>4. 本平台暂不支持发音功能。</p>
+                    
+                    <h3 style="margin-top: 25px;">支持</h3>
+                    <p>欢迎提供有关定州翻译的词条、例句或语法等内容，共同完善《中山韵典》在线网站。</p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- 修复：极简404页面DOM - 仅保留404 -->
+    <div class="page-404" id="page404">
+        <h1>404</h1>
+    </div>
+
+    <!-- 页脚 -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>中山韵典在线</h4>
+                    <p>定州方言查询平台 © 2026 | 《中山韵典》</p>
+                </div>
+            </div>
+            <div class="copyright">
+                <p>联系方式：邮箱2647023658@qq.com</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // ============================================
+        // 数据库区域 - 便于直接编辑和导入
+        // ============================================
+        
+        // 新格式数据库 - 使用标记系统 [类型]内容
+        const dialectDatabaseText = `
+[汉字]阿
+[拼音]ā
+[词条]阿欠
+[词条拼音]ā qìn
+[词条释义]〈拟声〉打喷嚏的声音。
+[拼音]wō
+[词条]阿弥陀佛
+[词条拼音]wō mí tuó fó （老派读音）& ē mí tuó fó （新派读音）
+[词条释义]佛教指西方极乐世界最大的佛，信佛的人用作口头诵念的佛号，表示祈祷或感谢神灵等意思。
+[拼音]ē
+[释义]见【阿弥陀佛】。
+[拼音]ra
+[释义]个、只、见等单体量词，用于基数词个位数为1、2、3、4、7、9的数字后构成数量词。
+
+[汉字]啊
+[拼音]à
+[释义]感痛时的发声。
+
+[汉字]腌
+[拼音]ā
+[词条]腌臜
+[词条拼音]ā zā
+[词条释义]脏，不干净。
+[拼音]yān
+[释义]将某些食物添入或泡入盐、醋等调料品后放置一段时间使之入味。
+
+[汉字]岸
+[拼音]ŋàn（老派）& àn（新派）
+[释义] 江河湖海等水边的陆地。
+
+[汉字]按
+[拼音]ŋàn（老派）& àn（新派）
+[释义] 用手或手指压。
+[注意]该字不常用。
+
+[汉字]学
+[拼音]xiáo
+[释义1]学习。
+[例句]我～着哩。
+[例句翻译]我正在学习。
+[释义2]学校。
+[例句]那边儿'有仨么～。
+[例句翻译]那边有三座学校。
+[词条]学习
+[词条拼音]xiáo xí
+[词条释义]通过阅读、听讲、研究、实践等获得知识或技能的过程。
+[词条]学生
+[词条拼音]xiáo sheng
+[词条释义]在学校学习的人；接受他人的教导并帮助传播和实行的人。
+[拼音]xué
+[释义]用于文词、新词，如“学校”“数学”。
+
+[汉字]案
+[拼音]ŋàn（老派）& àn（新派）
+[词条]案子
+[词条拼音] ŋàn zi（老派）& àn zi（新派）
+[词条释义]①砧板；②案宗，案件。
+
+[汉字]噙
+[拼音]qún
+[释义]（用嘴）含，完全没入嘴中但不咀嚼或吞咽。
+
+[汉字]含
+[拼音]hán
+[释义]文词用字，表示包含。
+
+[汉字]哎
+[拼音]èi
+[释义]应答声。用于应答他人、回应他人，或打招呼引起他人注意。（用此打招呼可能会被视为不礼貌。）
+[拼音]ei & yei
+[释义]疑问语气代词。
+
+[汉字]挨
+[拼音]ŋāi（老派）& āi（新派）
+[释义1]顺着（次序）。
+[词条]挨个儿'
+[词条拼音]ŋāi gèr（老派）&āi gèr（新派）
+[词条释义]逐一，依次。
+[释义2]靠近，紧挨着。
+[例句]咱俩哩座儿'～着哩！
+[例句翻译]咱们两个的座位是挨着的！
+[释义3]受到（不好的事情）。
+[词条]挨呲儿'
+[词条拼音]āi cīr
+[词条释义]挨骂、挨训。
+
+[汉字]碍
+[拼音]ŋài（老派）& ài（新派）
+[释义] 妨碍，阻碍。
+[词条]碍妨·碍妨儿'
+[词条拼音]ŋài fánɡ(r) · ài fánɡ(r)
+[词条释义]妨碍。
+[词条]碍事儿'
+[词条拼音]ŋài shìr · ài shìr
+[词条释义]妨碍做事，造成不方便。
+[词条]碍事儿'不拉脚
+[词条拼音]ŋài shìr bú la jiǎo · ài shìr bú la jiǎo
+[词条释义]碍事儿'。也叫【碍事儿'巴脚】。
+
+
+[汉字]唉
+[拼音]ài
+[释义]哀叹声。
+
+[汉字]矮
+[拼音]ǎi（新派）& ŋǎi（老派）
+[释义1]身材短。
+[释义2]（级别、地位）低。
+[注意]该字不常用。
+
+[汉字]爱
+[拼音]ài（新派）& ŋài（老派）
+[释义]对人或事物有很深的感情。
+[例句]我爱你。
+[拼音]lài
+[词条]爱……不……
+[词条拼音]lài……bú……
+[词条释义]分别用在同一个动词前面，表示无论选择哪一种都随便，含不满情绪。也写成【赖……不……】。
+[词条]爱不不
+[词条拼音]lài bú bú
+[词条释义]随便你怎么样，含不满情绪。由"爱……不……"句型变体产生，也写成【赖不不】。
+
+[汉字]暗
+[拼音]ŋàn（老派）& àn（新派）
+[释义] 光线不亮，黑；"明"的反义词。
+[注意]该字是文词，口语不常用。
+
+[汉字]熬
+[拼音]ŋāo（老派）& āo（新派）
+[释义] 烹饪方法，将蔬菜等长时间在水里煮。
+[词条]熬菜
+[词条拼音]ŋāo cài
+[词条释义]用宽粉条、猪肉、白菜等一起熬煮的饭菜，也叫【干粉菜】【大锅菜】。
+
+[汉字]熬
+[拼音]ŋáo（老派）& áo（新派）
+[释义] 忍受（艰难痛苦的事情）。
+[例句]总算~出来了。
+
+[汉字]袄
+[拼音]ŋǎo（老派）& ǎo（新派）
+[释义] 棉袄、羽绒服等冬天御寒厚件有里上衣。
+
+[汉字]昂
+[拼音]ang
+[释义1] 肯定答复用语。
+[例句]～，这就给你。
+[例句翻译]嗯，这就给你。
+[释义2]疑问语气代词，用时多与前一字合音或发生增声现象。
+[拼音]àng
+[释义]强调语气词。
+
+[汉字]安
+[拼音]ān
+[释义1]安稳。
+[释义2]疑问语气代词。
+[释义3]表示自己没有听清、没有理解或希望对方重新组织措辞等，希望让对方再说一次。
+[注意]此义只读ān，不可读ŋān。
+[词条]安生
+[词条拼音]ān shenɡ（新派）& ŋān shenɡ（老派）
+[词条释义]安静。
+
+[汉字]包
+[拼音]bāo
+[释义1]用纸、布或其他薄片把东西裹起来。
+[释义2]包袱。
+[释义3]〈老派〉（石头剪刀布里的）布。
+[释义4]赔偿。
+[例句]你把我书弄坏了，你得～我。
+[例句翻译]你把我的书弄坏了，你要赔我。
+[释义5]见【包儿'】。
+[词条]包儿'
+[词条拼音]bāor
+[词条释义]单肩包、挎包、女士包。
+
+[汉字]俺
+[拼音]ŋǎn（老派）& ǎn（新派）
+[释义1] 我的。
+[例句] ~书不见了。
+[例句翻译] 我的书不见了。
+[释义2] 我们。
+[例句] 俺俩不跟你玩儿了。
+[例句翻译] 我们两个不和你玩儿了。
+[释义3] 我们的。
+[例句] 这俺哩，不教你使。
+[例句翻译] 这个是我们的，不让你用。
+[释义4] 我家，我家的。
+[例句] 教你欺负俺，遭报应哩吧。
+[例句翻译] 让你欺负我家小孩儿'，遭报应了吧。
+
+[汉字]八
+[拼音]bā
+[释义1]七的下一个数字，九的上一个数字。
+[释义2]虚指，形容数次之多。
+[词条]八成儿'
+[词条拼音]bā chéngr
+[词条释义]多半、大概。常用于可能性的猜测。
+[词条]八哇
+[词条拼音]bā wa
+[词条释义]八个，八只，八件等，即以八为数词的不以双、群等非单体量词的数量词。
+
+[汉字]巴
+[拼音]bā
+[词条]巴儿'巴儿'
+[词条拼音]bār bār
+[词条释义]①明明。②无意义地。
+[词条例句]我～写作业哩，你干嘛非说我没写焉？
+[词条例句翻译]我明明在写作业，你为什么非说我没写呢？
+[词条例句]你们玩去，就教我～等着你们咉?
+[词条例句翻译]你们去玩，就让我干等着你们吗?
+[词条]巴不哩
+[词条拼音] bā bú li
+[词条释义]巴不得，急切地盼望。
+[词条]巴条虎儿'
+[词条拼音]bā tiáo hǔr
+[词条释义]壁虎。
+[词条]巴掌
+[词条拼音]bā zhang
+[词条释义]手，手掌。
+[词条]巴掌儿'
+[词条拼音]bā zhangr
+[词条释义]手套（“手巴掌儿'”的省称）。
+[拼音]ba
+[释义]部分词的成词后缀，多儿化，如【磕巴儿'】【张巴儿'】。
+
+[汉字]叭
+[拼音]bā
+[词条]叭儿'叭儿'
+[词条拼音]bār bar
+[词条释义]〈贬〉不停地说话。也说【嘚（不）嘚】。
+
+[汉字]疤
+[拼音]bā
+[释义]伤口愈合后的痕迹。
+[词条]疤瘌
+[词条拼音]bā la
+[词条释义]疤。
+
+[汉字]额
+[拼音]ŋé（老派）& é（新派）
+[释义]文读音，用于例如“额头”“余额”“名额儿'”等词汇中。
+[拼音]yé
+[词条]额颅盖儿'
+[词条拼音]yé la gàir
+[词条释义]额头。
+
+`;
+
+        // ============================================
+        // 数据库解析函数 - 将文本格式转换为结构化数据
+        // ============================================
+        function parseDialectDatabase(text) {
+            const entries = [];
+            const lines = text.trim().split('\n');
+            
+            let currentEntry = null;
+            let currentPinyin = null;
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                
+                if (line.startsWith('[汉字]')) {
+                    // 开始新字条
+                    if (currentEntry) {
+                        if (currentPinyin) {
+                            currentEntry.pinyins.push(currentPinyin);
+                        }
+                        entries.push(currentEntry);
+                    }
+                    
+                    currentEntry = {
+                        character: line.substring(4),
+                        pinyins: []
+                    };
+                    currentPinyin = null;
+                } 
+                else if (line.startsWith('[拼音]')) {
+                    // 新拼音
+                    if (currentPinyin) {
+                        currentEntry.pinyins.push(currentPinyin);
+                    }
+                    
+                    currentPinyin = {
+                        pinyin: line.substring(4),
+                        meanings: [],
+                        examples: [],
+                        entries: [],
+                        notes: null
+                    };
+                }
+                else if (line.startsWith('[释义')) {
+                    // 释义（支持[释义1]、[释义2]等格式）
+                    if (currentPinyin) {
+                        currentPinyin.meanings.push(line.substring(line.indexOf(']') + 1));
+                    }
+                }
+                else if (line.startsWith('[例句]')) {
+                    // 例句
+                    if (currentPinyin) {
+                        // 检查下一行是否是例句翻译
+                        let translation = '';
+                        if (i + 1 < lines.length && lines[i + 1].trim().startsWith('[例句翻译]')) {
+                            translation = lines[i + 1].trim().substring(6);
+                            i++; // 跳过翻译行
+                        }
+                        
+                        currentPinyin.examples.push({
+                            dialect: line.substring(4),
+                            translation: translation
+                        });
+                    }
+                }
+                else if (line.startsWith('[词条]')) {
+                    // 词条
+                    if (currentPinyin) {
+                        const entry = {
+                            title: line.substring(4),
+                            examples: [] // 添加词条例句数组
+                        };
+                        
+                        // 继续解析词条相关行
+                        for (let j = i + 1; j < lines.length; j++) {
+                            const nextLine = lines[j].trim();
+                            
+                            if (nextLine.startsWith('[词条拼音]')) {
+                                entry.entryPinyin = nextLine.substring(6);
+                            }
+                            else if (nextLine.startsWith('[词条释义]')) {
+                                entry.definition = nextLine.substring(6);
+                            }
+                            else if (nextLine.startsWith('[词条例句]')) {
+                                // 词条例句
+                                const entryExample = {
+                                    dialect: nextLine.substring(6)
+                                };
+                                
+                                // 检查是否有词条例句翻译
+                                if (j + 1 < lines.length && lines[j + 1].trim().startsWith('[词条例句翻译]')) {
+                                    entryExample.translation = lines[j + 1].trim().substring(8);
+                                    j++; // 跳过翻译行
+                                }
+                                
+                                entry.examples.push(entryExample);
+                            }
+                            else if (nextLine.startsWith('[词条]') || nextLine.startsWith('[拼音]') || 
+                                     nextLine.startsWith('[例句]') || nextLine.startsWith('[释义') || 
+                                     nextLine.startsWith('[注意]') || nextLine.startsWith('[汉字]')) {
+                                // 遇到下一个标记，回退并跳出循环
+                                i = j - 1;
+                                break;
+                            }
+                            else if (nextLine === '' || j === lines.length - 1) {
+                                // 空行或文件结束
+                                i = j;
+                                break;
+                            }
+                            else {
+                                // 继续解析，直到遇到下一个标记或空行
+                                i = j;
+                            }
+                        }
+                        
+                        currentPinyin.entries.push(entry);
+                    }
+                }
+                else if (line.startsWith('[注意]')) {
+                    // 注意事项
+                    if (currentPinyin) {
+                        currentPinyin.notes = line.substring(4);
+                    }
+                }
+            }
+            
+            // 添加最后一个条目
+            if (currentEntry) {
+                if (currentPinyin) {
+                    currentEntry.pinyins.push(currentPinyin);
+                }
+                entries.push(currentEntry);
+            }
+            
+            return entries;
+        }
+        
+        // 解析数据库
+        const dialectDatabase = parseDialectDatabase(dialectDatabaseText);
+
+        // ============================================
+        // 工具函数和DOM元素
+        // ============================================
+        
+        // DOM元素
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const initialMessage = document.getElementById('initialMessage');
+        const exampleWords = document.querySelectorAll('.example-word');
+        const searchModeSelect = document.getElementById('searchMode');
+        const modeDescription = document.getElementById('modeDescription');
+        // 新增：弹窗相关DOM
+        const grammarModal = document.getElementById('grammarModal');
+        const modalConfirm = document.getElementById('modalConfirm');
+        const modalCancel = document.getElementById('modalCancel');
+        const grammarLink = document.getElementById('nav-grammar');
+        // 新增：404相关DOM
+        const page404 = document.getElementById('page404');
+        
+        // 页面元素
+        const pages = {
+            home: document.getElementById('home-page'),
+            grammar: document.getElementById('grammar-page'),
+            about: document.getElementById('about-page'),
+            404: document.getElementById('page404') // 新增404页面
+        };
+        
+        // 导航元素
+        const navLinks = {
+            home: document.getElementById('nav-home'),
+            grammar: document.getElementById('nav-grammar'),
+            about: document.getElementById('nav-about')
+        };
+        
+        // 当前搜索词，用于高亮
+        let currentSearchQuery = '';
+        
+        // 当前搜索模式
+        let currentSearchMode = 'default';
+        
+        // PDF跳转链接
+        const PDF_LINK = 'https://www.kdocs.cn/l/cmRDmIOgvWIH?f=201';
+        
+        // 处理ng与ŋ的互相转换
+        function normalizeNgAndEng(str) {
+            if (!str) return '';
+            // 将ŋ转换为ng，同时处理大小写
+            return str.replace(/ŋ/g, 'ng').replace(/Ŋ/g, 'NG');
+        }
+        
+        // 修复：儿化音处理函数 - 正确显示小字儿
+        function processErhua(text) {
+            if (!text) return text;
+            // 全局匹配"儿'"，替换为小字儿
+            return text.replace(/儿'/g, '<span class="erhua-char">儿</span>');
+        }
+        
+        // 移除音调符号
+        function removeTones(pinyin) {
+            if (!pinyin) return '';
+            // 移除所有音调符号
+            return pinyin
+                .replace(/[āáǎà]/g, 'a')
+                .replace(/[ēéěè]/g, 'e')
+                .replace(/[īíǐì]/g, 'i')
+                .replace(/[ōóǒò]/g, 'o')
+                .replace(/[ūúǔù]/g, 'u')
+                .replace(/[ǖǘǚǜ]/g, 'v')
+                .replace(/[ĀÁǍÀ]/g, 'A')
+                .replace(/[ĒÉĚÈ]/g, 'E')
+                .replace(/[ĪÍǏÌ]/g, 'I')
+                .replace(/[ŌÓǑÒ]/g, 'O')
+                .replace(/[ŪÚǓÙ]/g, 'U')
+                .replace(/[ǕǗǙǛ]/g, 'V');
+        }
+        
+        // 修复：高亮函数 - 正确处理儿化音
+        function highlightText(text, query) {
+            if (!query || !text || query.trim() === '') return text;
+            
+            // 对查询词进行转义，用于正则表达式
+            const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            
+            try {
+                const regex = new RegExp(`(${escapedQuery})`, 'gi');
+                
+                // 先处理儿化音，再高亮
+                let processedText = text.replace(/儿'/g, '<span class="erhua-char">儿</span>');
+                
+                // 进行高亮
+                return processedText.replace(regex, (match) => {
+                    // 如果匹配到的是小字儿中的"儿"，不进行高亮
+                    if (match === '儿' && text.includes("儿'")) {
+                        return match;
+                    }
+                    return `<span class="highlight">${match}</span>`;
+                });
+            } catch (e) {
+                console.error('正则表达式构建失败:', e);
+                return text;
+            }
+        }
+        
+        // 显示初始消息
+        function showInitialMessage() {
+            resultsContainer.innerHTML = `
+                <div class="no-results" id="initialMessage">
+                    <i class="fas fa-search"></i>
+                    <h3>欢迎使用中山韵典在线</h3>
+                    <p>请输入定州方言字词或拼音进行查询，结果将显示在这里</p>
+                    <p style="margin-top: 15px; font-size: 0.9rem; color: #777;">
+                       当前为测试数据库，大量内容尚未上传！<br>
+                        支持无声调拼音搜索。<br>
+                        支持输入ng以匹配到ŋ。<br>
+                        提供“默认模式"和"反查模式”两种搜索方式
+                    </p>
+                </div>
+            `;
+        }
+        
+        // 默认模式匹配函数
+        function matchesSearchDefault(item, query) {
+            if (!query) return false;
+            
+            const normalizedQuery = normalizeNgAndEng(query.toLowerCase());
+            
+            // 1. 检查汉字匹配
+            if (item.character.includes(query)) {
+                return true;
+            }
+            
+            // 2. 检查拼音匹配（支持无声调和ng/ŋ转换）
+            for (const pinyinObj of item.pinyins) {
+                // 检查完整拼音
+                const pinyinLower = pinyinObj.pinyin.toLowerCase();
+                const normalizedPinyin = normalizeNgAndEng(pinyinLower);
+                
+                // 检查原始拼音
+                if (pinyinLower.includes(query.toLowerCase())) {
+                    return true;
+                }
+                
+                // 检查转换后的拼音
+                if (normalizedPinyin.includes(normalizedQuery)) {
+                    return true;
+                }
+                
+                // 检查无声调拼音
+                const pinyinNoTone = removeTones(pinyinLower);
+                const normalizedPinyinNoTone = normalizeNgAndEng(pinyinNoTone);
+                
+                if (pinyinNoTone.includes(removeTones(query.toLowerCase()))) {
+                    return true;
+                }
+                
+                if (normalizedPinyinNoTone.includes(normalizedQuery)) {
+                    return true;
+                }
+                
+                // 3. 检查词条匹配
+                if (pinyinObj.entries) {
+                    for (const entry of pinyinObj.entries) {
+                        // 检查词条标题
+                        if (entry.title && entry.title.includes(query)) {
+                            return true;
+                        }
+                        
+                        // 检查词条拼音
+                        if (entry.entryPinyin) {
+                            const entryPinyinLower = entry.entryPinyin.toLowerCase();
+                            const normalizedEntryPinyin = normalizeNgAndEng(entryPinyinLower);
+                            
+                            if (entryPinyinLower.includes(query.toLowerCase())) {
+                                return true;
+                            }
+                            
+                            if (normalizedEntryPinyin.includes(normalizedQuery)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return false;
+        }
+        
+        // 反查模式匹配函数
+        function matchesSearchReverse(item, query) {
+            if (!query) return false;
+            
+            const normalizedQuery = normalizeNgAndEng(query.toLowerCase());
+            const queryNoTone = removeTones(query.toLowerCase());
+            const normalizedQueryNoTone = normalizeNgAndEng(queryNoTone);
+            
+            // 1. 检查汉字匹配
+            if (item.character.includes(query)) {
+                return true;
+            }
+            
+            // 2. 检查拼音匹配（支持无声调和ng/ŋ转换）
+            for (const pinyinObj of item.pinyins) {
+                // 检查完整拼音
+                const pinyinLower = pinyinObj.pinyin.toLowerCase();
+                const normalizedPinyin = normalizeNgAndEng(pinyinLower);
+                
+                // 检查原始拼音
+                if (pinyinLower.includes(query.toLowerCase())) {
+                    return true;
+                }
+                
+                // 检查转换后的拼音
+                if (normalizedPinyin.includes(normalizedQuery)) {
+                    return true;
+                }
+                
+                // 检查无声调拼音
+                const pinyinNoTone = removeTones(pinyinLower);
+                const normalizedPinyinNoTone = normalizeNgAndEng(pinyinNoTone);
+                
+                if (pinyinNoTone.includes(queryNoTone)) {
+                    return true;
+                }
+                
+                if (normalizedPinyinNoTone.includes(normalizedQueryNoTone)) {
+                    return true;
+                }
+                
+                // 3. 检查释义匹配
+                if (pinyinObj.meanings) {
+                    for (const meaning of pinyinObj.meanings) {
+                        if (meaning.includes(query)) {
+                            return true;
+                        }
+                    }
+                }
+                
+                // 4. 检查词条匹配
+                if (pinyinObj.entries) {
+                    for (const entry of pinyinObj.entries) {
+                        // 检查词条标题
+                        if (entry.title && entry.title.includes(query)) {
+                            return true;
+                        }
+                        
+                        // 检查词条拼音
+                        if (entry.entryPinyin && entry.entryPinyin.includes(query)) {
+                            return true;
+                        }
+                        
+                        // 检查词条释义
+                        if (entry.definition && entry.definition.includes(query)) {
+                            return true;
+                        }
+                        
+                        // 检查词条例句
+                        if (entry.examples) {
+                            for (const example of entry.examples) {
+                                if (example.dialect && example.dialect.includes(query)) {
+                                    return true;
+                                }
+                                if (example.translation && example.translation.includes(query)) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // 5. 检查例句匹配
+                if (pinyinObj.examples) {
+                    for (const example of pinyinObj.examples) {
+                        if (example.dialect && example.dialect.includes(query)) {
+                            return true;
+                        }
+                        if (example.translation && example.translation.includes(query)) {
+                            return true;
+                        }
+                    }
+                }
+                
+                // 6. 检查注意事项匹配
+                if (pinyinObj.notes && pinyinObj.notes.includes(query)) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
+        // 修复：极简404切换函数 - 直接显示404页面，隐藏其他所有内容
+        function switchTo404() {
+            // 隐藏所有页面和网站元素
+            document.querySelector('header').style.display = 'none';
+            document.querySelector('nav').style.display = 'none';
+            document.getElementById('home-page').style.display = 'none';
+            document.getElementById('grammar-page').style.display = 'none';
+            document.getElementById('about-page').style.display = 'none';
+            document.querySelector('footer').style.display = 'none';
+            
+            // 隐藏语法弹窗（如果打开）
+            document.getElementById('grammarModal').classList.remove('show');
+            
+            // 显示404页面
+            document.getElementById('page404').style.display = 'flex';
+            
+            // 重置导航激活状态
+            Object.keys(navLinks).forEach(key => {
+                if (navLinks[key]) navLinks[key].classList.remove('active');
+            });
+            
+            // 禁止页面滚动
+            document.body.style.overflow = 'hidden';
+        }
+        
+        // 搜索函数 - 新增腚字检测
+        function searchDialect(query, mode) {
+            // 如果查询为空，显示初始消息
+            if (!query.trim()) {
+                showInitialMessage();
+                return;
+            }
+            
+            // 核心检测：搜索词包含"腚"则直接跳404
+            if (query.includes('腚')) {
+                switchTo404();
+                return;
+            }
+            
+            // 保存当前搜索词用于高亮
+            currentSearchQuery = query;
+            
+            // 清空结果容器
+            resultsContainer.innerHTML = '';
+            
+            // 根据搜索模式选择匹配函数
+            let results;
+            if (mode === 'reverse') {
+                results = dialectDatabase.filter(item => matchesSearchReverse(item, query));
+            } else {
+                results = dialectDatabase.filter(item => matchesSearchDefault(item, query));
+            }
+            
+            // 显示结果
+            if (results.length > 0) {
+                results.forEach(item => {
+                    const resultElement = document.createElement('div');
+                    resultElement.className = 'character-item';
+                    
+                    // 创建汉字标题（高亮显示）
+                    const highlightedCharacter = highlightText(item.character, query);
+                    
+                    let html = `
+                        <div class="character-header">
+                            <div class="character-title">${highlightedCharacter}</div>
+                        </div>
+                    `;
+                    
+                    // 添加每个拼音的信息
+                    item.pinyins.forEach(pinyinObj => {
+                        // 处理拼音显示
+                        const pinyinDisplay = highlightText(pinyinObj.pinyin, query);
+                        
+                        html += `
+                            <div class="pinyin-container">
+                                <div class="pinyin-item">
+                                    <div class="pinyin-text">${pinyinDisplay}</div>
+                        `;
+                        
+                        // 添加释义
+                        if (pinyinObj.meanings && pinyinObj.meanings.length > 0) {
+                            html += `<div class="meaning-container">`;
+                            
+                            // 显示所有释义
+                            pinyinObj.meanings.forEach((meaning, index) => {
+                                const meaningDisplay = highlightText(meaning, query);
+                                html += `<div class="meaning-item">${meaningDisplay}</div>`;
+                                
+                                // 检查是否有针对当前释义的例句
+                                if (pinyinObj.examples && pinyinObj.examples.length > 0) {
+                                    // 这里简单假设第一个例句对应第一个释义，以此类推
+                                    if (pinyinObj.examples[index]) {
+                                        const example = pinyinObj.examples[index];
+                                        const dialectDisplay = highlightText(example.dialect, query);
+                                        const highlightedTranslation = highlightText(example.translation, query);
+                                        
+                                        html += `<div class="example-container">`;
+                                        html += `<div class="example-dialect">${dialectDisplay}</div>`;
+                                        if (example.translation) {
+                                            html += `<div class="example-translation">${highlightedTranslation}</div>`;
+                                        }
+                                        html += `</div>`;
+                                    }
+                                }
+                            });
+                            
+                            html += `</div>`;
+                        }
+                        
+                        // 添加普通例句（不是针对特定释义的）
+                        if (pinyinObj.examples && pinyinObj.examples.length > 0) {
+                            // 检查是否有未关联到释义的例句
+                            const totalMeanings = pinyinObj.meanings ? pinyinObj.meanings.length : 0;
+                            if (pinyinObj.examples.length > totalMeanings) {
+                                html += `<div class="example-container">`;
+                                for (let i = totalMeanings; i < pinyinObj.examples.length; i++) {
+                                    const example = pinyinObj.examples[i];
+                                    const dialectDisplay = highlightText(example.dialect, query);
+                                    const highlightedTranslation = highlightText(example.translation, query);
+                                    
+                                    html += `<div class="example-dialect">${dialectDisplay}</div>`;
+                                    if (example.translation) {
+                                        html += `<div class="example-translation">${highlightedTranslation}</div>`;
+                                    }
+                                }
+                                html += `</div>`;
+                            }
+                        }
+                        
+                        // 添加词条
+                        if (pinyinObj.entries && pinyinObj.entries.length > 0) {
+                            html += `<div class="entry-container">`;
+                            pinyinObj.entries.forEach(entry => {
+                                const entryTitle = highlightText(entry.title, query);
+                                const entryPinyin = highlightText(entry.entryPinyin, query);
+                                const entryDefinition = highlightText(entry.definition, query);
+                                
+                                html += `
+                                    <div class="entry-item">
+                                        <div class="entry-title">【${entryTitle}】</div>
+                                        ${entryPinyin ? `<div class="entry-pinyin">${entryPinyin}</div>` : ''}
+                                        ${entryDefinition ? `<div class="entry-definition">${entryDefinition}</div>` : ''}
+                                `;
+                                
+                                // 添加词条例句
+                                if (entry.examples && entry.examples.length > 0) {
+                                    entry.examples.forEach(example => {
+                                        const exampleDialect = highlightText(example.dialect, query);
+                                        const exampleTranslation = highlightText(example.translation, query);
+                                        
+                                        html += `<div class="example-container">`;
+                                        html += `<div class="example-dialect">${exampleDialect}</div>`;
+                                        if (example.translation) {
+                                            html += `<div class="example-translation">${exampleTranslation}</div>`;
+                                        }
+                                        html += `</div>`;
+                                    });
+                                }
+                                
+                                html += `</div>`;
+                            });
+                            html += `</div>`;
+                        }
+                        
+                        // 添加注意事项
+                        if (pinyinObj.notes) {
+                            const notesDisplay = highlightText(pinyinObj.notes, query);
+                            html += `
+                                <div class="note-container">
+                                    <div class="note-title">注意</div>
+                                    <div class="note-content">${notesDisplay}</div>
+                                </div>
+                            `;
+                        }
+                        
+                        html += `</div></div>`;
+                    });
+                    
+                    resultElement.innerHTML = html;
+                    resultsContainer.appendChild(resultElement);
+                });
+            } else {
+                // 没有找到结果
+                resultsContainer.innerHTML = `
+                    <div class="no-results">
+                        <i class="fas fa-question-circle"></i>
+                        <h3>搜索不到结果</h3>
+                        <p>未找到与“${query}”相关的定州方言词条</p>
+                        <p>该词条可能尚未收录，不代表一定不存于定州方言。</p>
+                        <p>当前仅支持使用简体汉字或拼音查询。</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // 页面切换函数
+        function switchPage(pageId) {
+            // 首先恢复所有页面元素的显示
+            document.querySelector('header').style.display = 'block';
+            document.querySelector('nav').style.display = 'block';
+            document.querySelector('footer').style.display = 'block';
+            
+            // 隐藏所有页面
+            document.getElementById('home-page').style.display = 'none';
+            document.getElementById('grammar-page').style.display = 'none';
+            document.getElementById('about-page').style.display = 'none';
+            document.getElementById('page404').style.display = 'none';
+            
+            // 恢复页面滚动
+            document.body.style.overflow = 'auto';
+            
+            // 显示目标页面
+            if (pageId === 'home') {
+                document.getElementById('home-page').style.display = 'block';
+            } else if (pageId === 'grammar') {
+                document.getElementById('grammar-page').style.display = 'block';
+            } else if (pageId === 'about') {
+                document.getElementById('about-page').style.display = 'block';
+            }
+            
+            // 更新导航激活状态
+            Object.keys(navLinks).forEach(key => {
+                if (navLinks[key]) {
+                    if (key === pageId) {
+                        navLinks[key].classList.add('active');
+                    } else {
+                        navLinks[key].classList.remove('active');
+                    }
+                }
+            });
+            
+            // 如果是首页，滚动到搜索区域
+            if (pageId === 'home') {
+                window.scrollTo({top: 0, behavior: 'smooth'});
+            }
+        }
+
+        // 弹窗显示/隐藏函数
+        function showModal() {
+            grammarModal.classList.add('show');
+            // 禁止背景滚动
+            document.body.style.overflow = 'hidden';
+        }
+        function hideModal() {
+            grammarModal.classList.remove('show');
+            // 恢复背景滚动
+            document.body.style.overflow = 'auto';
+        }
+
+        // 事件监听
+        searchBtn.addEventListener('click', () => {
+            const query = searchInput.value.trim();
+            searchDialect(query, currentSearchMode);
+        });
+        
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const query = searchInput.value.trim();
+                searchDialect(query, currentSearchMode);
+            }
+        });
+        
+        // 搜索模式切换
+        searchModeSelect.addEventListener('change', function() {
+            currentSearchMode = this.value;
+            
+            // 更新模式描述
+            if (currentSearchMode === 'default') {
+                modeDescription.textContent = '默认模式：仅支持按定州方言查询。反查模式：支持按定州方言查询和通过释义反查。';
+            } else {
+                modeDescription.textContent = '反查模式：支持按定州方言查询和通过释义反查。默认模式：仅支持按定州方言查询。';
+            }
+            
+            // 如果搜索框有内容，重新搜索
+            if (searchInput.value.trim() && !searchInput.value.includes('腚')) {
+                searchDialect(searchInput.value.trim(), currentSearchMode);
+            } else {
+                showInitialMessage();
+            }
+        });
+        
+        // 示例词点击事件
+        exampleWords.forEach(wordElement => {
+            wordElement.addEventListener('click', () => {
+                const word = wordElement.getAttribute('data-word');
+                searchInput.value = word;
+                searchDialect(word, currentSearchMode);
+            });
+        });
+        
+        // 导航点击事件 - 排除闯关链接（它已经在新标签页打开）
+        Object.keys(navLinks).forEach(key => {
+            if (navLinks[key] && key !== 'challenge') {
+                navLinks[key].addEventListener('click', (e) => {
+                    e.preventDefault();
+                    // 语法导航单独处理，显示弹窗
+                    if (key === 'grammar') {
+                        showModal();
+                    } else {
+                        switchPage(key);
+                    }
+                });
+            }
+        });
+
+        // 弹窗按钮事件
+        // 确认按钮 - 跳转PDF链接
+        modalConfirm.addEventListener('click', () => {
+            hideModal();
+            window.open(PDF_LINK, '_blank'); // 新标签页打开PDF
+        });
+        // 取消按钮 - 隐藏弹窗并返回首页
+        modalCancel.addEventListener('click', () => {
+            hideModal();
+            switchPage('home');
+            navLinks.home.classList.add('active');
+            navLinks.grammar.classList.remove('active');
+        });
+        // 点击弹窗遮罩层关闭弹窗
+        grammarModal.addEventListener('click', (e) => {
+            if (e.target === grammarModal) {
+                hideModal();
+            }
+        });
+        // ESC键关闭弹窗
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && grammarModal.classList.contains('show')) {
+                hideModal();
+            }
+        });
+        
+        // 初始化页面
+        function initPage() {
+            // 初始显示首页
+            switchPage('home');
+            
+            // 清空搜索框
+            searchInput.value = '';
+            
+            // 显示初始消息
+            showInitialMessage();
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', initPage);
+        
+        // 添加一些交互效果
+        searchInput.addEventListener('focus', function() {
+            this.parentElement.style.transform = 'translateY(-5px)';
+        });
+        
+        searchInput.addEventListener('blur', function() {
+            this.parentElement.style.transform = 'translateY(0)';
+        });
+        
+        // 添加搜索建议提示
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            if (query.toLowerCase() === 'ng') {
+                // 显示提示：可以匹配ŋ
+                const searchBox = document.querySelector('.search-box');
+                let hint = document.querySelector('.ng-hint');
+                
+                if (!hint) {
+                    hint = document.createElement('div');
+                    hint.className = 'ng-hint';
+                    hint.style.cssText = `
+                        margin-top: 8px;
+                        font-size: 0.9rem;
+                        color: rgba(255, 255, 255, 0.8);
+                        font-style: italic;
+                    `;
+                    searchBox.appendChild(hint);
+                }
+                
+                hint.textContent = '提示：搜索ng可以查询到ŋ音';
+            } else {
+                // 移除提示
+                const hint = document.querySelector('.ng-hint');
+                if (hint) {
+                    hint.remove();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
