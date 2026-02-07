@@ -615,6 +615,70 @@
             font-family: "宋体", "SimSun", serif;
         }
         
+        /* 新增：输入提示弹窗样式 */
+        .input-alert-mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .input-alert-mask.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .input-alert-box {
+            background: var(--white);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+        .input-alert-icon {
+            font-size: 2.5rem;
+            color: #e74c3c;
+            margin-bottom: 1rem;
+        }
+        .input-alert-title {
+            font-size: 1.5rem;
+            color: #c0392b;
+            margin-bottom: 1rem;
+            font-family: "楷体", "STKaiti", "KaiTi", serif;
+        }
+        .input-alert-desc {
+            font-size: 1.1rem;
+            color: #555;
+            line-height: 1.8;
+            margin-bottom: 2rem;
+            font-family: "宋体", "SimSun", "NSimSun", serif;
+        }
+        .input-alert-button {
+            padding: 10px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: "楷体", "STKaiti", "KaiTi", serif;
+            background-color: var(--primary-color);
+            color: var(--white);
+        }
+        .input-alert-button:hover {
+            background-color: #234426;
+            transform: translateY(-2px);
+        }
+        
         /* 响应式设计 - 导航栏始终横向排列 + 弹窗适配 + 极简404适配 */
         @media (max-width: 768px) {
             .header-content {
@@ -643,6 +707,16 @@
                 font-size: 1.3rem;
             }
             .grammar-modal-desc {
+                font-size: 1rem;
+            }
+            
+            .input-alert-box {
+                padding: 1.5rem;
+            }
+            .input-alert-title {
+                font-size: 1.3rem;
+            }
+            .input-alert-desc {
                 font-size: 1rem;
             }
 
@@ -746,11 +820,23 @@
                 <i class="fas fa-file-pdf"></i>
             </div>
             <h3 class="grammar-modal-title">定州方言语法扼要</h3>
-            <p class="grammar-modal-desc">您将进入《定州方言语法扼要》（半成品）的PDF文件阅览界面，点击“确认”后查看。</p>
+            <p class="grammar-modal-desc">您将进入《定州方言语法扼要》（半成品）的PDF文件阅览界面，点击"确认"后查看。</p>
             <div class="grammar-modal-buttons">
                 <button class="modal-btn modal-btn-confirm" id="modalConfirm">确认</button>
                 <button class="modal-btn modal-btn-cancel" id="modalCancel">取消</button>
             </div>
+        </div>
+    </div>
+    
+    <!-- 新增：输入提示弹窗DOM -->
+    <div class="input-alert-mask" id="inputAlertModal">
+        <div class="input-alert-box">
+            <div class="input-alert-icon">
+                <i class="fas fa-exclamation-circle"></i>
+            </div>
+            <h3 class="input-alert-title">输入无效</h3>
+            <p class="input-alert-desc" id="inputAlertMessage">请输入汉字或拼音。</p>
+            <button class="input-alert-button" id="inputAlertConfirm">确定</button>
         </div>
     </div>
 
@@ -802,10 +888,10 @@
                         <h3>欢迎使用中山韵典在线</h3>
                         <p>请输入定州方言字词或拼音进行查询，结果将显示在这里</p>
                         <p style="margin-top: 15px; font-size: 0.9rem; color: #777;">
-                           当前为测试数据库，大量内容尚未上传！<br>
-                            支持无声调拼音搜索， 支持输入ng以匹配到ŋ。。<br>
+                            当前为测试数据库，大量内容尚未上传！<br>
+                            支持无声调拼音搜索，支持输入ng以匹配到ŋ。<br>
                             暂不支持IPA、繁体字、注音符号等查询。<br>
-                            提供“默认模式”和“反查模式”两种搜索方式
+                            提供"默认模式"和"反查模式"两种搜索方式
                         </p>
                     </div>
                     
@@ -1332,12 +1418,15 @@
 
 [汉字]边
 [拼音]biàn
-[释义1]见【边儿'】。
-[释义2]姓。
+[释义]见【边儿'】。
+[释义]姓。
 [词条]边儿'
-[词条拼音]biànr
-[词条释义]①边缘，靠近物体的地方；②方位词后缀。
+[词条拼音]biānr
+[词条释义]①边缘，靠近物体的地方；②方位词后缀。③（一）侧，（一）阵营。
 [拼音]bān
+[词条]边儿'
+[词条拼音]bānr
+[词条释义]①（一）侧，（一）阵营。也写作【班儿'】；②方位词后缀”。
 [词条]边边
 [词条拼音]bān bɑn
 [词条释义]见【边儿'边儿'】和本字页面底部的“注意”。也写作【般般】。
@@ -1361,12 +1450,16 @@
 [汉字]板
 [拼音]bǎn
 [释义]见【板儿'】。
+[释义]露出严肃或不高兴的表情。
 [词条]板儿'
 [词条拼音]bǎnr
 [词条释义]片状的较硬的物体；板状的物体。也叫【板子】。
-[词条]板刺儿'
-[词条拼音]bǎn cìr
-[词条释义]见【毛刺儿'】。
+[词条]板床儿'
+[词条拼音]bǎn chuánɡr
+[词条释义]较矮的坐具，多指马扎儿'或小板凳儿'。
+[词条]板儿'床
+[词条拼音]bǎnr chuánɡ
+[词条释义]木板制成的床铺，多用于宿舍单人床。
 
 [汉字]版
 [拼音]bǎn
@@ -1375,11 +1468,6 @@
 [词条拼音]bán bénr
 [词条释义]同一作品的不同表现形式或因修改产生的不同具体样式。
 [注意]【正版】不儿化而【盗版儿'】儿化。
-
-[汉字]EVERY
-[拼音]every
-[释义]如果您想查询本网站目前收录的所有数据，可以在“反查模式”下搜索“。”以看到当前收录的所有字词句。
-[释义]这是基于本站现为建立初期的特殊情况导致的，本质是bug现象，此方法不保证未来仍然可行。
 
 `;
 
@@ -1541,6 +1629,10 @@
         const grammarLink = document.getElementById('nav-grammar');
         // 新增：404相关DOM
         const page404 = document.getElementById('page404');
+        // 新增：输入提示弹窗DOM
+        const inputAlertModal = document.getElementById('inputAlertModal');
+        const inputAlertMessage = document.getElementById('inputAlertMessage');
+        const inputAlertConfirm = document.getElementById('inputAlertConfirm');
         
         // 页面元素
         const pages = {
@@ -1566,17 +1658,27 @@
         // PDF跳转链接
         const PDF_LINK = 'https://www.kdocs.cn/l/cmRDmIOgvWIH?f=201';
         
-        // 处理ng与ŋ的互相转换
-        function normalizeNgAndEng(str) {
+        // 检查输入是否包含非法字符（非汉字、非拉丁字母、非空格）
+        function containsInvalidChars(str) {
+            if (!str) return false;
+            
+            // 允许的字符：汉字、拉丁字母（大小写）、空格
+            const validPattern = /^[\u4e00-\u9fa5a-zA-Z\s]*$/;
+            return !validPattern.test(str);
+        }
+        
+        // 处理ng与ŋ的互相转换 - 修复：只将ŋ转换为ng，但不将ng转换回ŋ
+        function normalizeNgToEng(str) {
             if (!str) return '';
             // 将ŋ转换为ng，同时处理大小写
             return str.replace(/ŋ/g, 'ng').replace(/Ŋ/g, 'NG');
         }
         
-        // 修复：儿化音处理函数 - 正确显示小字儿
+        // 修复：正确的儿化音处理函数 - 不暴露HTML标签
         function processErhua(text) {
             if (!text) return text;
-            // 全局匹配"儿'"，替换为小字儿
+            // 使用正则表达式全局匹配"儿'"，替换为小字儿
+            // 注意：这里使用一个不会与正常文本冲突的占位符
             return text.replace(/儿'/g, '<span class="erhua-char">儿</span>');
         }
         
@@ -1594,31 +1696,51 @@
                 .replace(/[g]/g, 'ɡ');
         }
         
-        // 修复：高亮函数 - 正确处理儿化音
+        // 获取纯文本（去除HTML标签，但保留儿化标记"儿'"）
+        function getPlainText(text) {
+            if (!text) return '';
+            // 移除所有HTML标签，但保留儿化标记"儿'"
+            return text.replace(/<[^>]*>/g, '');
+        }
+        
+        // 修复：高亮函数 - 先进行高亮，然后再处理儿化音，防止HTML标签被高亮
         function highlightText(text, query) {
-            if (!query || !text || query.trim() === '') return text;
+            if (!query || !text || query.trim() === '') {
+                return processErhua(text);
+            }
             
             // 对查询词进行转义，用于正则表达式
             const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             
             try {
-                const regex = new RegExp(`(${escapedQuery})`, 'gi');
+                // 区分大小写匹配
+                const regex = new RegExp(`(${escapedQuery})`, 'g');
                 
-                // 先处理儿化音，再高亮
-                let processedText = text.replace(/儿'/g, '<span class="erhua-char">儿</span>');
-                
-                // 进行高亮
-                return processedText.replace(regex, (match) => {
-                    // 如果匹配到的是小字儿中的"儿"，不进行高亮
-                    if (match === '儿' && text.includes("儿'")) {
-                        return match;
-                    }
+                // 关键修复：先对原始文本进行高亮，再处理儿化音
+                // 这样高亮操作在纯文本上进行，不会触及HTML标签
+                const highlightedText = text.replace(regex, (match) => {
                     return `<span class="highlight">${match}</span>`;
                 });
+                
+                // 最后处理儿化音
+                return processErhua(highlightedText);
             } catch (e) {
                 console.error('正则表达式构建失败:', e);
-                return text;
+                return processErhua(text);
             }
+        }
+        
+        // 显示输入提示弹窗
+        function showInputAlert(message) {
+            inputAlertMessage.textContent = message;
+            inputAlertModal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        // 隐藏输入提示弹窗
+        function hideInputAlert() {
+            inputAlertModal.classList.remove('show');
+            document.body.style.overflow = 'auto';
         }
         
         // 显示初始消息
@@ -1629,55 +1751,59 @@
                     <h3>欢迎使用中山韵典在线</h3>
                     <p>请输入定州方言字词或拼音进行查询，结果将显示在这里</p>
                     <p style="margin-top: 15px; font-size: 0.9rem; color: #777;">
-                       当前为测试数据库，大量内容尚未上传！<br>
-                        支持无声调拼音搜索。<br>
-                        支持输入ng以匹配到ŋ。<br>
-                        提供“默认模式"和"反查模式”两种搜索方式
+                         当前为测试数据库，大量内容尚未上传！<br>
+                            支持无声调拼音搜索， 支持输入ng以匹配到ŋ。<br>
+                            暂不支持IPA、繁体字、注音符号等查询。<br>
+                            提供"默认模式"和"反查模式"两种搜索方式
                     </p>
                 </div>
             `;
         }
         
-        // 默认模式匹配函数
+        // 修复：默认模式匹配函数 - 正确处理ŋ匹配
         function matchesSearchDefault(item, query) {
             if (!query) return false;
             
-            const normalizedQuery = normalizeNgAndEng(query.toLowerCase());
+            const queryLower = query.toLowerCase();
             
             // 1. 检查汉字匹配
             if (item.character.includes(query)) {
                 return true;
             }
             
-            // 2. 检查拼音匹配（支持无声调和ng/ŋ转换）
+            // 2. 检查拼音匹配
             for (const pinyinObj of item.pinyins) {
-                // 检查完整拼音
-                const pinyinLower = pinyinObj.pinyin.toLowerCase();
-                const normalizedPinyin = normalizeNgAndEng(pinyinLower);
+                const pinyin = pinyinObj.pinyin;
+                const pinyinLower = pinyin.toLowerCase();
                 
-                // 检查原始拼音
-                if (pinyinLower.includes(query.toLowerCase())) {
+                // 修复：单个n或g不应该匹配到ŋ
+                // 只有当查询是"ng"时才匹配到包含ŋ的拼音
+                if (queryLower === 'ng') {
+                    // 检查是否包含ŋ
+                    if (pinyinLower.includes('ŋ')) {
+                        return true;
+                    }
+                    // 检查转换后的拼音是否包含ng
+                    const normalizedPinyin = normalizeNgToEng(pinyinLower);
+                    if (normalizedPinyin.includes('ng')) {
+                        return true;
+                    }
+                }
+                
+                // 检查原始拼音（区分大小写）
+                if (pinyin.includes(query)) {
                     return true;
                 }
                 
-                // 检查转换后的拼音
-                if (normalizedPinyin.includes(normalizedQuery)) {
-                    return true;
-                }
-                
-                // 检查无声调拼音
+                // 检查无声调拼音匹配
                 const pinyinNoTone = removeTones(pinyinLower);
-                const normalizedPinyinNoTone = normalizeNgAndEng(pinyinNoTone);
+                const queryNoTone = removeTones(queryLower);
                 
-                if (pinyinNoTone.includes(removeTones(query.toLowerCase()))) {
+                if (pinyinNoTone.includes(queryNoTone)) {
                     return true;
                 }
                 
-                if (normalizedPinyinNoTone.includes(normalizedQuery)) {
-                    return true;
-                }
-                
-                // 3. 检查词条匹配
+                // 检查词条匹配
                 if (pinyinObj.entries) {
                     for (const entry of pinyinObj.entries) {
                         // 检查词条标题
@@ -1687,14 +1813,27 @@
                         
                         // 检查词条拼音
                         if (entry.entryPinyin) {
-                            const entryPinyinLower = entry.entryPinyin.toLowerCase();
-                            const normalizedEntryPinyin = normalizeNgAndEng(entryPinyinLower);
+                            const entryPinyin = entry.entryPinyin;
+                            const entryPinyinLower = entryPinyin.toLowerCase();
                             
-                            if (entryPinyinLower.includes(query.toLowerCase())) {
+                            // 修复：单个n或g不应该匹配到ŋ
+                            if (queryLower === 'ng') {
+                                if (entryPinyinLower.includes('ŋ')) {
+                                    return true;
+                                }
+                                const normalizedEntryPinyin = normalizeNgToEng(entryPinyinLower);
+                                if (normalizedEntryPinyin.includes('ng')) {
+                                    return true;
+                                }
+                            }
+                            
+                            if (entryPinyin.includes(query)) {
                                 return true;
                             }
                             
-                            if (normalizedEntryPinyin.includes(normalizedQuery)) {
+                            // 检查词条拼音的无声调匹配
+                            const entryPinyinNoTone = removeTones(entryPinyinLower);
+                            if (entryPinyinNoTone.includes(queryNoTone)) {
                                 return true;
                             }
                         }
@@ -1705,51 +1844,56 @@
             return false;
         }
         
-        // 反查模式匹配函数
+        // 修复：反查模式匹配函数 - 正确处理儿化标签和ŋ匹配
         function matchesSearchReverse(item, query) {
             if (!query) return false;
             
-            const normalizedQuery = normalizeNgAndEng(query.toLowerCase());
-            const queryNoTone = removeTones(query.toLowerCase());
-            const normalizedQueryNoTone = normalizeNgAndEng(queryNoTone);
+            const queryLower = query.toLowerCase();
             
             // 1. 检查汉字匹配
             if (item.character.includes(query)) {
                 return true;
             }
             
-            // 2. 检查拼音匹配（支持无声调和ng/ŋ转换）
+            // 2. 检查拼音匹配
             for (const pinyinObj of item.pinyins) {
-                // 检查完整拼音
-                const pinyinLower = pinyinObj.pinyin.toLowerCase();
-                const normalizedPinyin = normalizeNgAndEng(pinyinLower);
+                const pinyin = pinyinObj.pinyin;
+                const pinyinLower = pinyin.toLowerCase();
                 
-                // 检查原始拼音
-                if (pinyinLower.includes(query.toLowerCase())) {
+                // 修复：单个n或g不应该匹配到ŋ
+                // 只有当查询是"ng"时才匹配到包含ŋ的拼音
+                if (queryLower === 'ng') {
+                    if (pinyinLower.includes('ŋ')) {
+                        return true;
+                    }
+                    const normalizedPinyin = normalizeNgToEng(pinyinLower);
+                    if (normalizedPinyin.includes('ng')) {
+                        return true;
+                    }
+                }
+                
+                // 检查原始拼音（区分大小写）
+                if (pinyin.includes(query)) {
                     return true;
                 }
                 
-                // 检查转换后的拼音
-                if (normalizedPinyin.includes(normalizedQuery)) {
-                    return true;
-                }
-                
-                // 检查无声调拼音
+                // 检查无声调拼音匹配
                 const pinyinNoTone = removeTones(pinyinLower);
-                const normalizedPinyinNoTone = normalizeNgAndEng(pinyinNoTone);
+                const queryNoTone = removeTones(queryLower);
                 
                 if (pinyinNoTone.includes(queryNoTone)) {
                     return true;
                 }
                 
-                if (normalizedPinyinNoTone.includes(normalizedQueryNoTone)) {
-                    return true;
-                }
-                
-                // 3. 检查释义匹配
+                // 3. 检查释义匹配 - 使用纯文本，避免HTML标签匹配
                 if (pinyinObj.meanings) {
                     for (const meaning of pinyinObj.meanings) {
-                        if (meaning.includes(query)) {
+                        const plainMeaning = getPlainText(meaning);
+                        if (plainMeaning.includes(query)) {
+                            return true;
+                        }
+                        // 检查无声调拼音匹配
+                        if (removeTones(plainMeaning.toLowerCase()).includes(queryNoTone)) {
                             return true;
                         }
                     }
@@ -1764,44 +1908,100 @@
                         }
                         
                         // 检查词条拼音
-                        if (entry.entryPinyin && entry.entryPinyin.includes(query)) {
-                            return true;
-                        }
-                        
-                        // 检查词条释义
-                        if (entry.definition && entry.definition.includes(query)) {
-                            return true;
-                        }
-                        
-                        // 检查词条例句
-                        if (entry.examples) {
-                            for (const example of entry.examples) {
-                                if (example.dialect && example.dialect.includes(query)) {
+                        if (entry.entryPinyin) {
+                            const entryPinyin = entry.entryPinyin;
+                            const entryPinyinLower = entryPinyin.toLowerCase();
+                            
+                            // 修复：单个n或g不应该匹配到ŋ
+                            if (queryLower === 'ng') {
+                                if (entryPinyinLower.includes('ŋ')) {
                                     return true;
                                 }
-                                if (example.translation && example.translation.includes(query)) {
+                                const normalizedEntryPinyin = normalizeNgToEng(entryPinyinLower);
+                                if (normalizedEntryPinyin.includes('ng')) {
                                     return true;
+                                }
+                            }
+                            
+                            if (entryPinyin.includes(query)) {
+                                return true;
+                            }
+                            
+                            // 检查词条拼音的无声调匹配
+                            const entryPinyinNoTone = removeTones(entryPinyinLower);
+                            if (entryPinyinNoTone.includes(queryNoTone)) {
+                                return true;
+                            }
+                        }
+                        
+                        // 检查词条释义 - 使用纯文本
+                        if (entry.definition) {
+                            const plainDefinition = getPlainText(entry.definition);
+                            if (plainDefinition.includes(query)) {
+                                return true;
+                            }
+                            // 检查无声调拼音匹配
+                            if (removeTones(plainDefinition.toLowerCase()).includes(queryNoTone)) {
+                                return true;
+                            }
+                        }
+                        
+                        // 检查词条例句 - 使用纯文本
+                        if (entry.examples) {
+                            for (const example of entry.examples) {
+                                if (example.dialect) {
+                                    const plainDialect = getPlainText(example.dialect);
+                                    if (plainDialect.includes(query)) {
+                                        return true;
+                                    }
+                                    // 检查无声调拼音匹配
+                                    if (removeTones(plainDialect.toLowerCase()).includes(queryNoTone)) {
+                                        return true;
+                                    }
+                                }
+                                if (example.translation) {
+                                    const plainTranslation = getPlainText(example.translation);
+                                    if (plainTranslation.includes(query)) {
+                                        return true;
+                                    }
                                 }
                             }
                         }
                     }
                 }
                 
-                // 5. 检查例句匹配
+                // 5. 检查例句匹配 - 使用纯文本
                 if (pinyinObj.examples) {
                     for (const example of pinyinObj.examples) {
-                        if (example.dialect && example.dialect.includes(query)) {
-                            return true;
+                        if (example.dialect) {
+                            const plainDialect = getPlainText(example.dialect);
+                            if (plainDialect.includes(query)) {
+                                return true;
+                            }
+                            // 检查无声调拼音匹配
+                            if (removeTones(plainDialect.toLowerCase()).includes(queryNoTone)) {
+                                return true;
+                            }
                         }
-                        if (example.translation && example.translation.includes(query)) {
-                            return true;
+                        if (example.translation) {
+                            const plainTranslation = getPlainText(example.translation);
+                            if (plainTranslation.includes(query)) {
+                                return true;
+                            }
                         }
                     }
                 }
                 
-                // 6. 检查注意事项匹配
-                if (pinyinObj.notes && pinyinObj.notes.includes(query)) {
-                    return true;
+                // 6. 检查注意事项匹配 - 使用纯文本
+                if (pinyinObj.notes) {
+                    const plainNotes = getPlainText(pinyinObj.notes);
+                    if (plainNotes.includes(query)) {
+                        return true;
+                    }
+                    // 检查无声调拼音匹配
+                    if (removeTones(plainNotes.toLowerCase()).includes(queryNoTone)) {
+                        return true;
+                    }
                 }
             }
             
@@ -1821,6 +2021,9 @@
             // 隐藏语法弹窗（如果打开）
             document.getElementById('grammarModal').classList.remove('show');
             
+            // 隐藏输入提示弹窗（如果打开）
+            document.getElementById('inputAlertModal').classList.remove('show');
+            
             // 显示404页面
             document.getElementById('page404').style.display = 'flex';
             
@@ -1833,7 +2036,7 @@
             document.body.style.overflow = 'hidden';
         }
         
-        // 搜索函数 - 新增腚字检测
+        // 搜索函数 - 新增腚字检测和输入验证
         function searchDialect(query, mode) {
             // 如果查询为空，显示初始消息
             if (!query.trim()) {
@@ -1841,9 +2044,22 @@
                 return;
             }
             
+            // 检查特殊关键词"every"（不区分大小写）
+            if (query.toLowerCase() === 'every') {
+                // 显示全部内容
+                displayAllEntries();
+                return;
+            }
+            
             // 核心检测：搜索词包含"腚"则直接跳404
             if (query.includes('腚')) {
                 switchTo404();
+                return;
+            }
+            
+            // 检查输入是否包含非法字符
+            if (containsInvalidChars(query)) {
+                showInputAlert('请输入汉字或拼音进行搜索，其他字符无效。');
                 return;
             }
             
@@ -1863,132 +2079,7 @@
             
             // 显示结果
             if (results.length > 0) {
-                results.forEach(item => {
-                    const resultElement = document.createElement('div');
-                    resultElement.className = 'character-item';
-                    
-                    // 创建汉字标题（高亮显示）
-                    const highlightedCharacter = highlightText(item.character, query);
-                    
-                    let html = `
-                        <div class="character-header">
-                            <div class="character-title">${highlightedCharacter}</div>
-                        </div>
-                    `;
-                    
-                    // 添加每个拼音的信息
-                    item.pinyins.forEach(pinyinObj => {
-                        // 处理拼音显示
-                        const pinyinDisplay = highlightText(pinyinObj.pinyin, query);
-                        
-                        html += `
-                            <div class="pinyin-container">
-                                <div class="pinyin-item">
-                                    <div class="pinyin-text">${pinyinDisplay}</div>
-                        `;
-                        
-                        // 添加释义
-                        if (pinyinObj.meanings && pinyinObj.meanings.length > 0) {
-                            html += `<div class="meaning-container">`;
-                            
-                            // 显示所有释义
-                            pinyinObj.meanings.forEach((meaning, index) => {
-                                const meaningDisplay = highlightText(meaning, query);
-                                html += `<div class="meaning-item">${meaningDisplay}</div>`;
-                                
-                                // 检查是否有针对当前释义的例句
-                                if (pinyinObj.examples && pinyinObj.examples.length > 0) {
-                                    // 这里简单假设第一个例句对应第一个释义，以此类推
-                                    if (pinyinObj.examples[index]) {
-                                        const example = pinyinObj.examples[index];
-                                        const dialectDisplay = highlightText(example.dialect, query);
-                                        const highlightedTranslation = highlightText(example.translation, query);
-                                        
-                                        html += `<div class="example-container">`;
-                                        html += `<div class="example-dialect">${dialectDisplay}</div>`;
-                                        if (example.translation) {
-                                            html += `<div class="example-translation">${highlightedTranslation}</div>`;
-                                        }
-                                        html += `</div>`;
-                                    }
-                                }
-                            });
-                            
-                            html += `</div>`;
-                        }
-                        
-                        // 添加普通例句（不是针对特定释义的）
-                        if (pinyinObj.examples && pinyinObj.examples.length > 0) {
-                            // 检查是否有未关联到释义的例句
-                            const totalMeanings = pinyinObj.meanings ? pinyinObj.meanings.length : 0;
-                            if (pinyinObj.examples.length > totalMeanings) {
-                                html += `<div class="example-container">`;
-                                for (let i = totalMeanings; i < pinyinObj.examples.length; i++) {
-                                    const example = pinyinObj.examples[i];
-                                    const dialectDisplay = highlightText(example.dialect, query);
-                                    const highlightedTranslation = highlightText(example.translation, query);
-                                    
-                                    html += `<div class="example-dialect">${dialectDisplay}</div>`;
-                                    if (example.translation) {
-                                        html += `<div class="example-translation">${highlightedTranslation}</div>`;
-                                    }
-                                }
-                                html += `</div>`;
-                            }
-                        }
-                        
-                        // 添加词条
-                        if (pinyinObj.entries && pinyinObj.entries.length > 0) {
-                            html += `<div class="entry-container">`;
-                            pinyinObj.entries.forEach(entry => {
-                                const entryTitle = highlightText(entry.title, query);
-                                const entryPinyin = highlightText(entry.entryPinyin, query);
-                                const entryDefinition = highlightText(entry.definition, query);
-                                
-                                html += `
-                                    <div class="entry-item">
-                                        <div class="entry-title">【${entryTitle}】</div>
-                                        ${entryPinyin ? `<div class="entry-pinyin">${entryPinyin}</div>` : ''}
-                                        ${entryDefinition ? `<div class="entry-definition">${entryDefinition}</div>` : ''}
-                                `;
-                                
-                                // 添加词条例句
-                                if (entry.examples && entry.examples.length > 0) {
-                                    entry.examples.forEach(example => {
-                                        const exampleDialect = highlightText(example.dialect, query);
-                                        const exampleTranslation = highlightText(example.translation, query);
-                                        
-                                        html += `<div class="example-container">`;
-                                        html += `<div class="example-dialect">${exampleDialect}</div>`;
-                                        if (example.translation) {
-                                            html += `<div class="example-translation">${exampleTranslation}</div>`;
-                                        }
-                                        html += `</div>`;
-                                    });
-                                }
-                                
-                                html += `</div>`;
-                            });
-                            html += `</div>`;
-                        }
-                        
-                        // 添加注意事项
-                        if (pinyinObj.notes) {
-                            const notesDisplay = highlightText(pinyinObj.notes, query);
-                            html += `
-                                <div class="note-container">
-                                    <div class="note-title">注意</div>
-                                    <div class="note-content">${notesDisplay}</div>
-                                </div>
-                            `;
-                        }
-                        
-                        html += `</div></div>`;
-                    });
-                    
-                    resultElement.innerHTML = html;
-                    resultsContainer.appendChild(resultElement);
-                });
+                displayResults(results, query);
             } else {
                 // 没有找到结果
                 resultsContainer.innerHTML = `
@@ -2001,6 +2092,283 @@
                     </div>
                 `;
             }
+        }
+        
+        // 显示所有条目
+        function displayAllEntries() {
+            currentSearchQuery = '';
+            resultsContainer.innerHTML = '';
+            
+            // 显示所有数据库条目
+            dialectDatabase.forEach(item => {
+                const resultElement = document.createElement('div');
+                resultElement.className = 'character-item';
+                
+                // 创建汉字标题
+                const characterDisplay = processErhua(item.character);
+                
+                let html = `
+                    <div class="character-header">
+                        <div class="character-title">${characterDisplay}</div>
+                    </div>
+                `;
+                
+                // 添加每个拼音的信息
+                item.pinyins.forEach(pinyinObj => {
+                    // 处理拼音显示
+                    const pinyinDisplay = processErhua(pinyinObj.pinyin);
+                    
+                    html += `
+                        <div class="pinyin-container">
+                            <div class="pinyin-item">
+                                <div class="pinyin-text">${pinyinDisplay}</div>
+                    `;
+                    
+                    // 添加释义
+                    if (pinyinObj.meanings && pinyinObj.meanings.length > 0) {
+                        html += `<div class="meaning-container">`;
+                        
+                        // 显示所有释义
+                        pinyinObj.meanings.forEach((meaning, index) => {
+                            const meaningDisplay = processErhua(meaning);
+                            html += `<div class="meaning-item">${meaningDisplay}</div>`;
+                            
+                            // 检查是否有针对当前释义的例句
+                            if (pinyinObj.examples && pinyinObj.examples.length > 0) {
+                                // 这里简单假设第一个例句对应第一个释义，以此类推
+                                if (pinyinObj.examples[index]) {
+                                    const example = pinyinObj.examples[index];
+                                    const dialectDisplay = processErhua(example.dialect);
+                                    const translationDisplay = processErhua(example.translation);
+                                    
+                                    html += `<div class="example-container">`;
+                                    html += `<div class="example-dialect">${dialectDisplay}</div>`;
+                                    if (example.translation) {
+                                        html += `<div class="example-translation">${translationDisplay}</div>`;
+                                    }
+                                    html += `</div>`;
+                                }
+                            }
+                        });
+                        
+                        html += `</div>`;
+                    }
+                    
+                    // 添加普通例句（不是针对特定释义的）
+                    if (pinyinObj.examples && pinyinObj.examples.length > 0) {
+                        // 检查是否有未关联到释义的例句
+                        const totalMeanings = pinyinObj.meanings ? pinyinObj.meanings.length : 0;
+                        if (pinyinObj.examples.length > totalMeanings) {
+                            html += `<div class="example-container">`;
+                            for (let i = totalMeanings; i < pinyinObj.examples.length; i++) {
+                                const example = pinyinObj.examples[i];
+                                const dialectDisplay = processErhua(example.dialect);
+                                const translationDisplay = processErhua(example.translation);
+                                
+                                html += `<div class="example-dialect">${dialectDisplay}</div>`;
+                                if (example.translation) {
+                                    html += `<div class="example-translation">${translationDisplay}</div>`;
+                                }
+                            }
+                            html += `</div>`;
+                        }
+                    }
+                    
+                    // 添加词条
+                    if (pinyinObj.entries && pinyinObj.entries.length > 0) {
+                        html += `<div class="entry-container">`;
+                        pinyinObj.entries.forEach(entry => {
+                            const entryTitle = processErhua(entry.title);
+                            const entryPinyin = processErhua(entry.entryPinyin);
+                            const entryDefinition = processErhua(entry.definition);
+                            
+                            html += `
+                                <div class="entry-item">
+                                    <div class="entry-title">【${entryTitle}】</div>
+                                    ${entryPinyin ? `<div class="entry-pinyin">${entryPinyin}</div>` : ''}
+                                    ${entryDefinition ? `<div class="entry-definition">${entryDefinition}</div>` : ''}
+                            `;
+                            
+                            // 添加词条例句
+                            if (entry.examples && entry.examples.length > 0) {
+                                entry.examples.forEach(example => {
+                                    const exampleDialect = processErhua(example.dialect);
+                                    const exampleTranslation = processErhua(example.translation);
+                                    
+                                    html += `<div class="example-container">`;
+                                    html += `<div class="example-dialect">${exampleDialect}</div>`;
+                                    if (example.translation) {
+                                        html += `<div class="example-translation">${exampleTranslation}</div>`;
+                                    }
+                                    html += `</div>`;
+                                });
+                            }
+                            
+                            html += `</div>`;
+                        });
+                        html += `</div>`;
+                    }
+                    
+                    // 添加注意事项
+                    if (pinyinObj.notes) {
+                        const notesDisplay = processErhua(pinyinObj.notes);
+                        html += `
+                            <div class="note-container">
+                                <div class="note-title">注意</div>
+                                <div class="note-content">${notesDisplay}</div>
+                            </div>
+                        `;
+                    }
+                    
+                    html += `</div></div>`;
+                });
+                
+                resultElement.innerHTML = html;
+                resultsContainer.appendChild(resultElement);
+            });
+            
+            // 添加显示全部条目的提示
+            const totalCount = document.createElement('div');
+            totalCount.className = 'no-results';
+            totalCount.innerHTML = `
+                <i class="fas fa-database"></i>
+                <h3>显示全部内容</h3>
+                <p>当前数据库中共有 ${dialectDatabase.length} 个条目</p>
+                <p style="margin-top: 15px; font-size: 0.9rem; color: #777;">
+                    搜索every即可显示本页面。
+                </p>
+            `;
+            resultsContainer.appendChild(totalCount);
+        }
+        
+        // 显示搜索结果
+        function displayResults(results, query) {
+            results.forEach(item => {
+                const resultElement = document.createElement('div');
+                resultElement.className = 'character-item';
+                
+                // 创建汉字标题（高亮显示）
+                const highlightedCharacter = highlightText(item.character, query);
+                
+                let html = `
+                    <div class="character-header">
+                        <div class="character-title">${highlightedCharacter}</div>
+                    </div>
+                `;
+                
+                // 添加每个拼音的信息
+                item.pinyins.forEach(pinyinObj => {
+                    // 处理拼音显示
+                    const pinyinDisplay = highlightText(pinyinObj.pinyin, query);
+                    
+                    html += `
+                        <div class="pinyin-container">
+                            <div class="pinyin-item">
+                                <div class="pinyin-text">${pinyinDisplay}</div>
+                    `;
+                    
+                    // 添加释义
+                    if (pinyinObj.meanings && pinyinObj.meanings.length > 0) {
+                        html += `<div class="meaning-container">`;
+                        
+                        // 显示所有释义
+                        pinyinObj.meanings.forEach((meaning, index) => {
+                            const meaningDisplay = highlightText(meaning, query);
+                            html += `<div class="meaning-item">${meaningDisplay}</div>`;
+                            
+                            // 检查是否有针对当前释义的例句
+                            if (pinyinObj.examples && pinyinObj.examples.length > 0) {
+                                // 这里简单假设第一个例句对应第一个释义，以此类推
+                                if (pinyinObj.examples[index]) {
+                                    const example = pinyinObj.examples[index];
+                                    const dialectDisplay = highlightText(example.dialect, query);
+                                    const highlightedTranslation = highlightText(example.translation, query);
+                                    
+                                    html += `<div class="example-container">`;
+                                    html += `<div class="example-dialect">${dialectDisplay}</div>`;
+                                    if (example.translation) {
+                                        html += `<div class="example-translation">${highlightedTranslation}</div>`;
+                                    }
+                                    html += `</div>`;
+                                }
+                            }
+                        });
+                        
+                        html += `</div>`;
+                    }
+                    
+                    // 添加普通例句（不是针对特定释义的）
+                    if (pinyinObj.examples && pinyinObj.examples.length > 0) {
+                        // 检查是否有未关联到释义的例句
+                        const totalMeanings = pinyinObj.meanings ? pinyinObj.meanings.length : 0;
+                        if (pinyinObj.examples.length > totalMeanings) {
+                            html += `<div class="example-container">`;
+                            for (let i = totalMeanings; i < pinyinObj.examples.length; i++) {
+                                const example = pinyinObj.examples[i];
+                                const dialectDisplay = highlightText(example.dialect, query);
+                                const highlightedTranslation = highlightText(example.translation, query);
+                                
+                                html += `<div class="example-dialect">${dialectDisplay}</div>`;
+                                if (example.translation) {
+                                    html += `<div class="example-translation">${highlightedTranslation}</div>`;
+                                }
+                            }
+                            html += `</div>`;
+                        }
+                    }
+                    
+                    // 添加词条
+                    if (pinyinObj.entries && pinyinObj.entries.length > 0) {
+                        html += `<div class="entry-container">`;
+                        pinyinObj.entries.forEach(entry => {
+                            const entryTitle = highlightText(entry.title, query);
+                            const entryPinyin = highlightText(entry.entryPinyin, query);
+                            const entryDefinition = highlightText(entry.definition, query);
+                            
+                            html += `
+                                <div class="entry-item">
+                                    <div class="entry-title">【${entryTitle}】</div>
+                                    ${entryPinyin ? `<div class="entry-pinyin">${entryPinyin}</div>` : ''}
+                                    ${entryDefinition ? `<div class="entry-definition">${entryDefinition}</div>` : ''}
+                            `;
+                            
+                            // 添加词条例句
+                            if (entry.examples && entry.examples.length > 0) {
+                                entry.examples.forEach(example => {
+                                    const exampleDialect = highlightText(example.dialect, query);
+                                    const exampleTranslation = highlightText(example.translation, query);
+                                    
+                                    html += `<div class="example-container">`;
+                                    html += `<div class="example-dialect">${exampleDialect}</div>`;
+                                    if (example.translation) {
+                                        html += `<div class="example-translation">${exampleTranslation}</div>`;
+                                    }
+                                    html += `</div>`;
+                                });
+                            }
+                            
+                            html += `</div>`;
+                        });
+                        html += `</div>`;
+                    }
+                    
+                    // 添加注意事项
+                    if (pinyinObj.notes) {
+                        const notesDisplay = highlightText(pinyinObj.notes, query);
+                        html += `
+                            <div class="note-container">
+                                <div class="note-title">注意</div>
+                                <div class="note-content">${notesDisplay}</div>
+                            </div>
+                        `;
+                    }
+                    
+                    html += `</div></div>`;
+                });
+                
+                resultElement.innerHTML = html;
+                resultsContainer.appendChild(resultElement);
+            });
         }
         
         // 页面切换函数
@@ -2132,10 +2500,25 @@
                 hideModal();
             }
         });
+        
+        // 输入提示弹窗确认按钮
+        inputAlertConfirm.addEventListener('click', hideInputAlert);
+        // 点击输入提示弹窗遮罩层关闭弹窗
+        inputAlertModal.addEventListener('click', (e) => {
+            if (e.target === inputAlertModal) {
+                hideInputAlert();
+            }
+        });
+        
         // ESC键关闭弹窗
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && grammarModal.classList.contains('show')) {
-                hideModal();
+            if (e.key === 'Escape') {
+                if (grammarModal.classList.contains('show')) {
+                    hideModal();
+                }
+                if (inputAlertModal.classList.contains('show')) {
+                    hideInputAlert();
+                }
             }
         });
         
@@ -2194,16 +2577,4 @@
         });
     </script>
 </body>
-
 </html>
-
-
-
-
-
-
-
-
-
-
-
