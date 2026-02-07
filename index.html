@@ -48,6 +48,15 @@
             font-family: "隶书", "LiSu", "STLiti", serif;
         }
         
+/* 新增：特殊汉字图片样式 */
+.character-img {
+    display: inline-block;
+    height: 2.5rem; /* 图片高度，和文字一样高 */
+    width: auto; /* 自动宽度保持比例 */
+    vertical-align: middle; /* 与文字对齐 */
+    margin-right: 5px;
+}
+
         /* 保留楷体用于特定元素 - 包括词条、释义、例句 */
         .nav-menu a, .section-title, body,
         .meaning-item, .entry-title, .entry-definition,
@@ -1346,6 +1355,12 @@
 [词条拼音]bǎi bú zěnɡ zhɑo
 [词条解释]谓无法应对情况，听天由命。相当于回应“怎么办？”的“凉拌！”。
 
+[汉字]IMG:char1
+[拼音]jiě
+[释义]“给你”的合音，即给你。
+[注意]该字只能单字成句，不可组词或用于句子成分。
+[注意]该字已经罕见使用。
+
 [汉字]伯
 [拼音]bǎi
 [词条]伯伯
@@ -1484,21 +1499,36 @@
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
                 
-                if (line.startsWith('[汉字]')) {
-                    // 开始新字条
-                    if (currentEntry) {
-                        if (currentPinyin) {
-                            currentEntry.pinyins.push(currentPinyin);
-                        }
-                        entries.push(currentEntry);
-                    }
-                    
-                    currentEntry = {
-                        character: line.substring(4),
-                        pinyins: []
-                    };
-                    currentPinyin = null;
-                } 
+            
+if (line.startsWith('[汉字]')) {
+    // 开始新字条
+    if (currentEntry) {
+        if (currentPinyin) {
+            currentEntry.pinyins.push(currentPinyin);
+        }
+        entries.push(currentEntry);
+    }
+    
+    let charValue = line.substring(4);
+    // 判断是否是图片标记
+    let character;
+    if (charValue.startsWith('IMG:')) {
+        // 图片类型，存储图片信息
+        character = {
+            type: 'img',
+            src: charValue.substring(4) // 去掉'IMG:'，得到char1
+        };
+    } else {
+        // 普通文本类型
+        character = charValue;
+    }
+    
+    currentEntry = {
+        character: character,
+        pinyins: []
+    };
+    currentPinyin = null;
+}
                 else if (line.startsWith('[拼音]')) {
                     // 新拼音
                     if (currentPinyin) {
@@ -2104,8 +2134,15 @@
                 const resultElement = document.createElement('div');
                 resultElement.className = 'character-item';
                 
-                // 创建汉字标题
-                const characterDisplay = processErhua(item.character);
+               // 创建汉字标题
+let characterDisplay;
+if (typeof item.character === 'object' && item.character.type === 'img') {
+    // 如果是图片类型的汉字
+    characterDisplay = `<img src="images/${item.character.src}.png" alt="生僻字" class="character-img">`;
+} else {
+    // 如果是普通文本汉字
+    characterDisplay = processErhua(item.character);
+}
                 
                 let html = `
                     <div class="character-header">
@@ -2247,8 +2284,15 @@
                 const resultElement = document.createElement('div');
                 resultElement.className = 'character-item';
                 
-                // 创建汉字标题（高亮显示）
-                const highlightedCharacter = highlightText(item.character, query);
+              // 创建汉字标题（高亮显示）
+let highlightedCharacter;
+if (typeof item.character === 'object' && item.character.type === 'img') {
+    // 如果是图片类型的汉字
+    highlightedCharacter = `<img src="images/${item.character.src}.png" alt="生僻字" class="character-img">`;
+} else {
+    // 如果是普通文本汉字
+    highlightedCharacter = highlightText(item.character, query);
+}
                 
                 let html = `
                     <div class="character-header">
