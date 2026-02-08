@@ -909,7 +909,7 @@
                             当前为测试数据库，大量内容尚未上传！<br>
                             支持无声调拼音搜索，支持输入ng以匹配到ŋ。<br>
                             暂不支持IPA、繁体字、注音符号等查询。<br>
-                            提供“默认模式”和“反查模式”两种搜索方式
+                            提供“默认模式”和“反查模式”两种搜索方式。
                         </p>
                     </div>
                     
@@ -1695,12 +1695,13 @@
         // PDF跳转链接
         const PDF_LINK = 'https://www.kdocs.cn/l/cmRDmIOgvWIH?f=201';
         
-        // 检查输入是否包含非法字符（非汉字、非拉丁字母、非空格）
+        // 修复：检查输入是否包含非法字符 - 现在允许带声调的字母
         function containsInvalidChars(str) {
             if (!str) return false;
             
-            // 允许的字符：汉字、拉丁字母（大小写）、空格
-            const validPattern = /^[\u4e00-\u9fa5a-zA-Z\s]*$/;
+            // 允许的字符：汉字、拉丁字母（包括带声调的）、空格
+            // 包括：ɑāáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜüŋ以及普通a-zA-Z
+            const validPattern = /^[\u4e00-\u9fa5a-zA-Z\sɑāáǎàēéěèêūúǔùəōóǒòīíǐìǖǘǚǜüŋ]*$/;
             return !validPattern.test(str);
         }
         
@@ -1744,7 +1745,7 @@
         // 移除音调符号
         function removeTones(pinyin) {
             if (!pinyin) return '';
-            // 移除所有音调符号
+            // 移除所有音调符号，但保留ŋ
             return pinyin
                 .replace(/[āáǎàɑ]/g, 'a')
                 .replace(/[ēéěèê]/g, 'e')
@@ -1847,7 +1848,7 @@
                          当前为测试数据库，大量内容尚未上传！<br>
                             支持无声调拼音搜索， 输入ng可以匹配到ŋ。<br>
                             暂不支持IPA、繁体字、注音符号等查询。<br>
-                            提供“默认模式”和“反查模式”两种搜索方式
+                            提供“默认模式”和“反查模式”两种搜索方式。
                     </p>
                 </div>
             `;
@@ -2712,5 +2713,3 @@
     </script>
 </body>
 </html>
-
-
