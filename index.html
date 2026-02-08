@@ -6,6 +6,7 @@
     <title>中山韵典在线</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* 保持所有原有CSS样式不变 */
         * {
             margin: 0;
             padding: 0;
@@ -909,7 +910,7 @@
                             当前为测试数据库，大量内容尚未上传！<br>
                             支持无声调拼音搜索，支持输入ng以匹配到ŋ。<br>
                             暂不支持IPA、繁体字、注音符号等查询。<br>
-                            提供“默认模式”和“反查模式”两种搜索方式。
+                            提供“默认模式”和“反查模式”两种搜索方式
                         </p>
                     </div>
                     
@@ -1374,7 +1375,7 @@
 [拼音]bǎi
 [释义1]安放，排列。
 [释义2]摇动，摇摆。
-[释义3]〈动〉饥，饿。使……饥饿。用法参考【注意】。
+[释义3]〈动〉饥，饿。使……饥饿。用法参考本条目底部的“注意”。
 [词条]摆哩慌
 [词条拼音]bǎi li huɑnɡ
 [词条释义]饿得慌
@@ -1701,7 +1702,7 @@
             
             // 允许的字符：汉字、拉丁字母（包括带声调的）、空格
             // 包括：ɑāáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜüŋ以及普通a-zA-Z
-            const validPattern = /^[\u4e00-\u9fa5a-zA-Z\sɑāáǎàēéěèêūúǔùəōóǒòīíǐìǖǘǚǜüŋ]*$/;
+            const validPattern = /^[\u4e00-\u9fa5a-zA-Z\sɑāáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜüŋ]*$/;
             return !validPattern.test(str);
         }
         
@@ -1754,6 +1755,14 @@
                 .replace(/[ūúǔù]/g, 'u')
                 .replace(/[ǖǘǚǜü]/g, 'v')
                 .replace(/[g]/g, 'ɡ');
+        }
+        
+        // 新增：检查字符串是否包含带声调的字母
+        function hasToneMark(str) {
+            if (!str) return false;
+            // 检查是否包含带声调的字母
+            const tonePattern = /[āáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜ]/;
+            return tonePattern.test(str);
         }
         
         // 修复：获取纯文本（去除HTML标签，并处理儿化音为普通"儿"，同时去除图像标记）
@@ -1848,13 +1857,13 @@
                          当前为测试数据库，大量内容尚未上传！<br>
                             支持无声调拼音搜索， 输入ng可以匹配到ŋ。<br>
                             暂不支持IPA、繁体字、注音符号等查询。<br>
-                            提供“默认模式”和“反查模式”两种搜索方式。
+                            提供“默认模式”和“反查模式”两种搜索方式
                     </p>
                 </div>
             `;
         }
         
-        // 修复：默认模式匹配函数 - 正确处理ŋ匹配、图像标记和儿化音
+        // 修复：默认模式匹配函数 - 确保所有功能正常工作
         function matchesSearchDefault(item, query) {
             if (!query) return false;
             
@@ -1874,6 +1883,9 @@
                     return true;
                 }
             }
+            
+            // 检查查询是否包含声调标记
+            const hasToneInQuery = hasToneMark(query);
             
             // 2. 检查拼音匹配
             for (const pinyinObj of item.pinyins) {
@@ -1899,12 +1911,20 @@
                     return true;
                 }
                 
-                // 检查无声调拼音匹配
-                const pinyinNoTone = removeTones(pinyinLower);
-                const queryNoTone = removeTones(queryLower);
-                
-                if (pinyinNoTone.includes(queryNoTone)) {
-                    return true;
+                // 如果查询包含声调标记，进行精确匹配
+                if (hasToneInQuery) {
+                    // 精确匹配：直接检查拼音字符串是否包含查询字符串
+                    if (pinyin.includes(query)) {
+                        return true;
+                    }
+                } else {
+                    // 无声调匹配：检查无声调拼音匹配
+                    const pinyinNoTone = removeTones(pinyinLower);
+                    const queryNoTone = removeTones(queryLower);
+                    
+                    if (pinyinNoTone.includes(queryNoTone)) {
+                        return true;
+                    }
                 }
                 
                 // 检查词条匹配
@@ -1935,14 +1955,25 @@
                                 }
                             }
                             
+                            // 检查原始拼音（区分大小写）
                             if (entryPinyin.includes(query)) {
                                 return true;
                             }
                             
-                            // 检查词条拼音的无声调匹配
-                            const entryPinyinNoTone = removeTones(entryPinyinLower);
-                            if (entryPinyinNoTone.includes(queryNoTone)) {
-                                return true;
+                            // 如果查询包含声调标记，进行精确匹配
+                            if (hasToneInQuery) {
+                                // 精确匹配：直接检查拼音字符串是否包含查询字符串
+                                if (entryPinyin.includes(query)) {
+                                    return true;
+                                }
+                            } else {
+                                // 无声调匹配：检查无声调拼音匹配
+                                const entryPinyinNoTone = removeTones(entryPinyinLower);
+                                const queryNoTone = removeTones(queryLower);
+                                
+                                if (entryPinyinNoTone.includes(queryNoTone)) {
+                                    return true;
+                                }
                             }
                         }
                     }
@@ -1952,7 +1983,7 @@
             return false;
         }
         
-        // 修复：反查模式匹配函数 - 正确处理儿化音和图像标记
+        // 修复：反查模式匹配函数 - 确保所有功能正常工作
         function matchesSearchReverse(item, query) {
             if (!query) return false;
             
@@ -1972,6 +2003,9 @@
                     return true;
                 }
             }
+            
+            // 检查查询是否包含声调标记
+            const hasToneInQuery = hasToneMark(query);
             
             // 2. 检查拼音匹配
             for (const pinyinObj of item.pinyins) {
@@ -1994,12 +2028,20 @@
                     return true;
                 }
                 
-                // 检查无声调拼音匹配
-                const pinyinNoTone = removeTones(pinyinLower);
-                const queryNoTone = removeTones(queryLower);
-                
-                if (pinyinNoTone.includes(queryNoTone)) {
-                    return true;
+                // 如果查询包含声调标记，进行精确匹配
+                if (hasToneInQuery) {
+                    // 精确匹配：直接检查拼音字符串是否包含查询字符串
+                    if (pinyin.includes(query)) {
+                        return true;
+                    }
+                } else {
+                    // 无声调匹配：检查无声调拼音匹配
+                    const pinyinNoTone = removeTones(pinyinLower);
+                    const queryNoTone = removeTones(queryLower);
+                    
+                    if (pinyinNoTone.includes(queryNoTone)) {
+                        return true;
+                    }
                 }
                 
                 // 3. 检查释义匹配 - 使用纯文本，避免HTML标签匹配，并处理儿化音和图像标记
@@ -2009,9 +2051,12 @@
                         if (plainMeaning.includes(query)) {
                             return true;
                         }
-                        // 检查无声调拼音匹配
-                        if (removeTones(plainMeaning.toLowerCase()).includes(queryNoTone)) {
-                            return true;
+                        // 检查无声调拼音匹配（仅当查询不含声调时）
+                        if (!hasToneInQuery) {
+                            const queryNoTone = removeTones(queryLower);
+                            if (removeTones(plainMeaning.toLowerCase()).includes(queryNoTone)) {
+                                return true;
+                            }
                         }
                     }
                 }
@@ -2044,14 +2089,25 @@
                                 }
                             }
                             
+                            // 检查原始拼音（区分大小写）
                             if (entryPinyin.includes(query)) {
                                 return true;
                             }
                             
-                            // 检查词条拼音的无声调匹配
-                            const entryPinyinNoTone = removeTones(entryPinyinLower);
-                            if (entryPinyinNoTone.includes(queryNoTone)) {
-                                return true;
+                            // 如果查询包含声调标记，进行精确匹配
+                            if (hasToneInQuery) {
+                                // 精确匹配：直接检查拼音字符串是否包含查询字符串
+                                if (entryPinyin.includes(query)) {
+                                    return true;
+                                }
+                            } else {
+                                // 无声调匹配：检查无声调拼音匹配
+                                const entryPinyinNoTone = removeTones(entryPinyinLower);
+                                const queryNoTone = removeTones(queryLower);
+                                
+                                if (entryPinyinNoTone.includes(queryNoTone)) {
+                                    return true;
+                                }
                             }
                         }
                         
@@ -2061,9 +2117,12 @@
                             if (plainDefinition.includes(query)) {
                                 return true;
                             }
-                            // 检查无声调拼音匹配
-                            if (removeTones(plainDefinition.toLowerCase()).includes(queryNoTone)) {
-                                return true;
+                            // 检查无声调拼音匹配（仅当查询不含声调时）
+                            if (!hasToneInQuery) {
+                                const queryNoTone = removeTones(queryLower);
+                                if (removeTones(plainDefinition.toLowerCase()).includes(queryNoTone)) {
+                                    return true;
+                                }
                             }
                         }
                         
@@ -2075,9 +2134,12 @@
                                     if (plainDialect.includes(query)) {
                                         return true;
                                     }
-                                    // 检查无声调拼音匹配
-                                    if (removeTones(plainDialect.toLowerCase()).includes(queryNoTone)) {
-                                        return true;
+                                    // 检查无声调拼音匹配（仅当查询不含声调时）
+                                    if (!hasToneInQuery) {
+                                        const queryNoTone = removeTones(queryLower);
+                                        if (removeTones(plainDialect.toLowerCase()).includes(queryNoTone)) {
+                                            return true;
+                                        }
                                     }
                                 }
                                 if (example.translation) {
@@ -2099,9 +2161,12 @@
                             if (plainDialect.includes(query)) {
                                 return true;
                             }
-                            // 检查无声调拼音匹配
-                            if (removeTones(plainDialect.toLowerCase()).includes(queryNoTone)) {
-                                return true;
+                            // 检查无声调拼音匹配（仅当查询不含声调时）
+                            if (!hasToneInQuery) {
+                                const queryNoTone = removeTones(queryLower);
+                                if (removeTones(plainDialect.toLowerCase()).includes(queryNoTone)) {
+                                    return true;
+                                }
                             }
                         }
                         if (example.translation) {
@@ -2119,9 +2184,12 @@
                     if (plainNotes.includes(query)) {
                         return true;
                     }
-                    // 检查无声调拼音匹配
-                    if (removeTones(plainNotes.toLowerCase()).includes(queryNoTone)) {
-                        return true;
+                    // 检查无声调拼音匹配（仅当查询不含声调时）
+                    if (!hasToneInQuery) {
+                        const queryNoTone = removeTones(queryLower);
+                        if (removeTones(plainNotes.toLowerCase()).includes(queryNoTone)) {
+                            return true;
+                        }
                     }
                 }
             }
