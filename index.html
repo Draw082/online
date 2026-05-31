@@ -1606,6 +1606,8 @@
 [词条拼音]kéir kéir
 [词条释义]①<拟>模仿咳嗽的声音。②同【咳嗽】。
 
+
+
 [汉字]半
 [拼音]bàn
 [释义]二分之一，将整体分为两部分之后其中之一。
@@ -1862,7 +1864,7 @@
             return text.replace(imgPattern, (match, imgName) => {
                 // 如果是标题，使用较大的图片样式，否则使用内联样式
                 const imgClass = isTitle ? 'character-img' : 'inline-img-char';
-                return `<img src="images/${imgName}.png" alt="生僻字" class="${imgClass}">`;
+                return `<img src="images/${imgName}.png" alt="图片" class="${imgClass}">`;
             });
         }
         
@@ -2428,7 +2430,7 @@
                 let characterDisplay;
                 if (typeof item.character === 'object' && item.character.type === 'img') {
                     // 如果是图片类型的汉字
-                    characterDisplay = `<img src="images/${item.character.src}.png" alt="生僻字" class="character-img">`;
+                    characterDisplay = `<img src="images/${item.character.src}.png" alt="图片" class="character-img">`;
                 } else {
                     // 如果是普通文本汉字，处理儿化音和图像标记
                     characterDisplay = processTextWithImages(item.character, true);
@@ -2578,7 +2580,7 @@
                 let highlightedCharacter;
                 if (typeof item.character === 'object' && item.character.type === 'img') {
                     // 如果是图片类型的汉字
-                    highlightedCharacter = `<img src="images/${item.character.src}.png" alt="生僻字" class="character-img">`;
+                    highlightedCharacter = `<img src="images/${item.character.src}.png" alt="图片" class="character-img">`;
                 } else {
                     // 如果是普通文本汉字，使用高亮函数（已包含图像和儿化音处理）
                     highlightedCharacter = highlightText(item.character, query, true);
