@@ -1001,14 +1001,13 @@
 [释义]3. 本词典不标明异体字和繁体字。
 [释义]4. [新]和[老]两项标注若出现在拼音之前，表示是新派/老派读音，若出现在拼音之后词汇之前，表示是新派/老派词汇或用法。
 [释义]5. 由于定州方言有三种儿化音（含两种儿尾），其中与普通话相同的儿化音按《新华字典 第12版》的方案书写，即音节bān的儿化音写作bānr；儿尾则按以下方案写：如bānɡ的儿尾音写作bānɡ-r。儿化或儿尾将把“儿”字附在前字右下角；如果儿字为正常大小，则应正常读音。
-[释义]6. 一个字有多个读音且用法有异的，分列字头并在每个字头处注“另见”；一个字有多种读音但用法无异的，分列字头，在字母排序更靠前的读音上作注释，在其他字头上注“的又音”。
-[释义]7. 本词典关于检索方案仅设置了拼音检索方案，没有偏旁笔画等检索方案。其中拼音检索表不区分声调。
-[释义]8. 本词典设立了难检字检索表，以方便查阅生僻字。
-[释义]9. 本词典注音方案有拼音和注音符号注音两种方案，参考《汉语拼音方案》《拼音注音对照表》《维基百科》等资料。本词典以拼音标注为主，注音符号标注仅出现在每个音节（不含声调）第一次出现时附注在拼音之后。
+[释义]6. 一个字有多个读音且用法有异的，分列字头并在每个字头处注“另见”；一个字有多种读音但用法无异的，分列字头，在字母排序更靠前的读音上作注释，在其他字头上注“的又音”。（本条不适用于网站）
+[释义]7. 本词典关于检索方案仅设置了拼音检索方案，没有偏旁笔画等检索方案。其中拼音检索表不区分声调。（本条不适用于网站）
+[释义]8. 本词典设立了难检字检索表，以方便查阅生僻字。（本条不适用于网站）
+[释义]9. 本词典注音方案有拼音和注音符号注音两种方案，参考《汉语拼音方案》《拼音注音对照表》《维基百科》等资料。本词典以拼音标注为主，注音符号标注仅出现在每个音节（不含声调）第一次出现时附注在拼音之后。（本条不适用于网站）
 [释义]10. 定州方言的声调有阴平、阳平、上声、去声和轻声。其中部分去声字在轻声前读阳去，本词典不为可读阳去的字单设字头，而在词条里标出。以ɑ为例，本词典使用的阳去声调符号是ɑ̃。
-
-[释义]11. 本字典采用的例句形式为：在基础释义后用//隔开，以楷体书写方言例句，在括号内用仿宋体中标出普通话释义。方言例句中用到的例字（词）不再书写，用～代替之。
-[释义]12. 对<借><训><考>以外的各标注的含义，请查阅《特殊标注含义说明》（在搜索框搜索可以查阅）。
+[释义]11. 本字典采用的例句形式为：在基础释义后用//隔开，以楷体书写方言例句，在括号内用仿宋体中标出普通话释义。方言例句中用到的例字（词）不再书写，用～代替之。（本条不适用于网站）
+[释义]12. 对其他各标注的含义，请查阅《特殊标注含义说明》（在搜索框搜索可以查阅）。
 
 [汉字]特殊标注含义说明
 [拼音]以下标注顺序按照在本词典出现的先后排列。
@@ -1022,7 +1021,7 @@
 [释义]<少>不常用
 [释义]<惯>常用表达/短语/成语
 [释义]<数>数词
-[释义]<考>待考字词详见《凡例》
+[释义]<考>待考字词（详见《凡例》）
 [释义]<贬>贬义词 
 [释义]<介>介词
 [释义]<量>量词
@@ -1753,11 +1752,128 @@
             `;
         }
         
+        // ============================================
+        // 工具函数：判断字符串是否全为汉字
+        // ============================================
+        function isAllChinese(str) {
+            return /^[\u4e00-\u9fa5]+$/.test(str);
+        }
+        
+        // 工具函数：判断字符串是否为单个字母（a-z，不含声调）
+        function isSingleLetter(str) {
+            return /^[a-zA-Z]$/.test(str);
+        }
+        
+        // 工具函数：获取条目中"凡例"/"特殊标注含义说明"的汉字标题
+        function getCharacterText(item) {
+            if (typeof item.character === 'string') {
+                return item.character.replace(/儿'/g, '儿').replace(/IMG:\w+/g, '[字]');
+            }
+            return '';
+        }
+        
+        // 工具函数：判断是否为受保护的特殊条目（凡例/特殊标注含义说明）
+        function isSpecialEntry(item) {
+            const charText = getCharacterText(item);
+            return charText === '凡例' || charText === '特殊标注含义说明';
+        }
+        
+        // 工具函数：检查搜索词是否允许显示特殊条目
+        function allowsSpecialEntry(item, query) {
+            const charText = getCharacterText(item);
+            if (charText === '凡例') {
+                return query === '凡例';
+            }
+            if (charText === '特殊标注含义说明') {
+                return query === '特殊标注含义说明' || query === '特殊标注';
+            }
+            return true;
+        }
+        
+        // 工具函数：计算条目中汉字查询词的匹配次数（用于多汉字排序）
+        function countChineseMatches(item, query) {
+            let count = 0;
+            const charText = getCharacterText(item);
+            // 在汉字标题中统计
+            let idx = 0;
+            while ((idx = charText.indexOf(query, idx)) !== -1) { count++; idx += query.length; }
+            // 在所有拼音的释义、词条标题、词条释义、例句中统计
+            for (const pinyinObj of item.pinyins) {
+                if (pinyinObj.meanings) {
+                    for (const m of pinyinObj.meanings) {
+                        const t = getPlainText(m);
+                        let i2 = 0;
+                        while ((i2 = t.indexOf(query, i2)) !== -1) { count++; i2 += query.length; }
+                    }
+                }
+                if (pinyinObj.entries) {
+                    for (const entry of pinyinObj.entries) {
+                        if (entry.title) {
+                            const t = getPlainText(entry.title);
+                            let i2 = 0;
+                            while ((i2 = t.indexOf(query, i2)) !== -1) { count++; i2 += query.length; }
+                        }
+                        if (entry.definition) {
+                            const t = getPlainText(entry.definition);
+                            let i2 = 0;
+                            while ((i2 = t.indexOf(query, i2)) !== -1) { count++; i2 += query.length; }
+                        }
+                        if (entry.examples) {
+                            for (const ex of entry.examples) {
+                                if (ex.dialect) {
+                                    const t = getPlainText(ex.dialect);
+                                    let i2 = 0;
+                                    while ((i2 = t.indexOf(query, i2)) !== -1) { count++; i2 += query.length; }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (pinyinObj.examples) {
+                    for (const ex of pinyinObj.examples) {
+                        if (ex.dialect) {
+                            const t = getPlainText(ex.dialect);
+                            let i2 = 0;
+                            while ((i2 = t.indexOf(query, i2)) !== -1) { count++; i2 += query.length; }
+                        }
+                    }
+                }
+            }
+            return count;
+        }
+        
+        // 工具函数：检查条目是否有拼音刚好等于单个字母（去声调后）
+        function hasPinyinExactlyLetter(item, letter) {
+            const letterLower = letter.toLowerCase();
+            for (const pinyinObj of item.pinyins) {
+                const raw = pinyinObj.pinyin.trim();
+                // 去声调后是否完全等于该字母
+                const noTone = removeTones(raw.toLowerCase());
+                if (noTone === letterLower) return true;
+            }
+            return false;
+        }
+
         // 修复：默认模式匹配函数 - 确保所有功能正常工作
         function matchesSearchDefault(item, query) {
             if (!query) return false;
             
+            // 特殊条目访问控制
+            if (!allowsSpecialEntry(item, query)) return false;
+            
             const queryLower = query.toLowerCase();
+            
+            // 规则3：默认模式下搜索单个汉字，仅在[汉字]字段匹配
+            if (isAllChinese(query) && query.length === 1) {
+                if (typeof item.character === 'string') {
+                    let charToMatch = item.character.replace(/儿'/g, '儿');
+                    charToMatch = charToMatch.replace(/IMG:\w+/g, '[字]');
+                    return charToMatch.includes(query);
+                } else if (item.character.type === 'img') {
+                    return false;
+                }
+                return false;
+            }
             
             // 1. 检查汉字匹配（兼容对象和字符串类型）
             if (typeof item.character === 'string') {
@@ -1876,6 +1992,9 @@
         // 修复：反查模式匹配函数 - 确保所有功能正常工作
         function matchesSearchReverse(item, query) {
             if (!query) return false;
+            
+            // 特殊条目访问控制
+            if (!allowsSpecialEntry(item, query)) return false;
             
             const queryLower = query.toLowerCase();
             
@@ -2156,6 +2275,18 @@
                 results = dialectDatabase.filter(item => matchesSearchDefault(item, query));
             }
             
+            // 规则4：若搜索的是多个汉字，将匹配数更多的条目优先展示
+            if (isAllChinese(query) && query.length > 1) {
+                results.sort((a, b) => countChineseMatches(b, query) - countChineseMatches(a, query));
+            }
+            
+            // 规则5：若搜索的是单个字母，优先显示拼音刚好等于该字母（去声调）的条目
+            if (isSingleLetter(query)) {
+                const exactFirst = results.filter(item => hasPinyinExactlyLetter(item, query));
+                const rest = results.filter(item => !hasPinyinExactlyLetter(item, query));
+                results = exactFirst.concat(rest);
+            }
+            
             // 显示结果
             if (results.length > 0) {
                 displayResults(results, query);
@@ -2165,7 +2296,7 @@
                     <div class="no-results">
                         <i class="fas fa-question-circle"></i>
                         <h3>搜索不到结果</h3>
-                        <p>未找到与“${query}”相关的定州方言词条</p>
+                        <p>未找到与"${query}"相关的定州方言词条</p>
                         <p>该词条可能尚未收录，不代表一定不存于定州方言。</p>
                         <p>当前仅支持使用简体汉字或拼音查询。</p>
                     </div>
@@ -2178,8 +2309,25 @@
             currentSearchQuery = '';
             resultsContainer.innerHTML = '';
             
-            // 显示所有数据库条目
-            dialectDatabase.forEach(item => {
+            // 规则6：every模式排除凡例和特殊标注两个词条，且不计入总数
+            const entriesToShow = dialectDatabase.filter(item => !isSpecialEntry(item));
+            const totalCount = entriesToShow.length;
+            
+            // 规则6：将条目总数放在最前面
+            const countDiv = document.createElement('div');
+            countDiv.className = 'no-results';
+            countDiv.innerHTML = `
+                <i class="fas fa-database"></i>
+                <h3>显示全部内容</h3>
+                <p>当前数据库中共有 ${totalCount} 个条目</p>
+                <p style="margin-top: 15px; font-size: 0.9rem; color: #777;">
+                    搜索"Every"即可显示本页面。
+                </p>
+            `;
+            resultsContainer.appendChild(countDiv);
+            
+            // 显示所有数据库条目（不含凡例和特殊标注）
+            entriesToShow.forEach(item => {
                 const resultElement = document.createElement('div');
                 resultElement.className = 'character-item';
                 
@@ -2312,19 +2460,6 @@
                 resultElement.innerHTML = html;
                 resultsContainer.appendChild(resultElement);
             });
-            
-            // 添加显示全部条目的提示
-            const totalCount = document.createElement('div');
-            totalCount.className = 'no-results';
-            totalCount.innerHTML = `
-                <i class="fas fa-database"></i>
-                <h3>显示全部内容</h3>
-                <p>当前数据库中共有 ${dialectDatabase.length} 个条目</p>
-                <p style="margin-top: 15px; font-size: 0.9rem; color: #777;">
-                    搜索"Every"即可显示本页面。
-                </p>
-            `;
-            resultsContainer.appendChild(totalCount);
         }
         
         // 显示搜索结果
