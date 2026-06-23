@@ -2168,7 +2168,7 @@
             // 允许的字符：汉字、拉丁字母（包括带声调的）、空格
             // 包括：ɑāáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜüŋ以及普通a-zA-Z
          // 增加CJK扩展A区汉字区间 
-          const validPattern = /^[\u2E80-\u2EFF\u3400-\u4DBF\u4E00-\u9FA5\uF900-\uFAFF\U00020000-\U0002A6DF\U0002A700-\U0002B73F\U0002B740-\U0002B81F\U0002B820-\U0002CEAF\U0002CEB0-\U0002EBEF\U00030000-\U0003134Fa-zA-Z\sɑāáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜüŋ]*$/;
+          const validPattern = /^[\u2E80-\u2EFF\u3400-\u4DBF\u4E00-\u9FA5\uF900-\uFAFF\U00020000-\U0002A6DF\U0002A700-\U0002B73F\U0002B740-\U0002B81F\U0002B820-\U0002CEAF\U0002CEB0-\U0002EBEF\U00030000-\U0003134Fa-zA-Z\sɑāáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜüŋ]*$/u;
     return !validPattern.test(str);
 }
         
