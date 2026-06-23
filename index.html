@@ -1197,8 +1197,8 @@
 
 [汉字]熬
 [拼音]IMG:2 ŋáo IMG:3 áo
-[释义]IMG:6 ①忍受（艰难痛苦的事情）。
-[释义]IMG:6 ②烹饪方法，将食物长时间在水里煮。
+[释义]IMG:6 ①烹饪方法，将食物长时间在水里煮。
+[释义]IMG:6 ②忍受（艰难痛苦的事情）。
 [例句]总算～出来了。
 [例句翻译]终于熬出来了。
 [词条]熬菜
@@ -1843,14 +1843,12 @@
 [拼音]báo
 [释义1]IMG:4 ①在高度上占地距离少的（与“厚”相对）。
 [释义2]IMG:4 ②味道淡的，吃不出盐的味道的（与“咸”相对）。
-[释义3]IMG:4 IMG:14 ③稀少的，交情浅的，待遇不丰厚的。
-[释义4]IMG:6 IMG:14 ④临近。
-[例句]这本儿'书可～哩。
-[例句翻译]这本书很薄。
 [例句]这菜～哩不行。
 [例句翻译]这道菜十分寡淡。
+[释义3]IMG:4 IMG:14 ③稀少的，交情浅的，待遇不丰厚的。
 [例句]待你不～。
 [例句翻译]待你不薄。
+[释义4]IMG:6 IMG:14 ④临近。
 [例句]日～西山。
 [例句翻译]日薄西山。
 [词条]薄脆
@@ -2050,8 +2048,8 @@
 
 [汉字]锛
 [拼音]bēn
-[释义]IMG:6 ①因分心或犯困导致瞌睡时，头部持续往下低头并起伏的动作。
-[释义]IMG:6 ②啄。
+[释义]IMG:6 ①啄。
+[释义]IMG:6 ②因分心或犯困导致瞌睡时，头部持续往下低头并起伏的动作。
 [例句]你～哩一节课了，还睡昂？
 [例句翻译]你“小鸡啄米”式瞌睡了一节课了，居然还要睡觉吗？
 
@@ -2088,11 +2086,8 @@
 [汉字]崩
 [拼音]bēng
 [释义]①IMG:14 IMG:6 （山体）坍塌。
-[例句]
 [释义]②IMG:14 IMG:6 （君主）离世，死亡。
-[例句]
 [释义]③IMG:6 用枪支或炮等热武器击杀。
-[例句]
 [释义]④IMG:6 弹击，多指弹额头或后脑勺。
 [例句]嫑～我了，疼。
 [例句翻译]不要弹我额头了，疼。
@@ -2159,19 +2154,21 @@
                     currentPinyin = {
                         pinyin: line.substring(4),
                         meanings: [],
-                        examples: [],
                         entries: [],
                         notes: null
                     };
                 }
                 else if (line.startsWith('[释义')) {
-                    // 释义（支持[释义1]、[释义2]等格式）
+                    // 释义：每个释义现在自带 examples 数组
                     if (currentPinyin) {
-                        currentPinyin.meanings.push(line.substring(line.indexOf(']') + 1));
+                        currentPinyin.meanings.push({
+                            text: line.substring(line.indexOf(']') + 1),
+                            examples: []
+                        });
                     }
                 }
                 else if (line.startsWith('[例句]')) {
-                    // 例句
+                    // 例句：归入最后一条释义
                     if (currentPinyin) {
                         // 检查下一行是否是例句翻译
                         let translation = '';
@@ -2179,11 +2176,20 @@
                             translation = lines[i + 1].trim().substring(6);
                             i++; // 跳过翻译行
                         }
-                        
-                        currentPinyin.examples.push({
+                        const exampleObj = {
                             dialect: line.substring(4),
                             translation: translation
-                        });
+                        };
+                        // 如果有释义，添加到最后一条释义；否则创建一条空释义来接纳
+                        if (currentPinyin.meanings.length > 0) {
+                            currentPinyin.meanings[currentPinyin.meanings.length - 1].examples.push(exampleObj);
+                        } else {
+                            // 没有释义时，创建一条空释义来装例句
+                            currentPinyin.meanings.push({
+                                text: '',
+                                examples: [exampleObj]
+                            });
+                        }
                     }
                 }
                 else if (line.startsWith('[词条]')) {
@@ -2530,9 +2536,22 @@
             for (const pinyinObj of item.pinyins) {
                 if (pinyinObj.meanings) {
                     for (const m of pinyinObj.meanings) {
-                        const t = getPlainText(m);
-                        let i2 = 0;
-                        while ((i2 = t.indexOf(query, i2)) !== -1) { count++; i2 += query.length; }
+                        // 释义文本
+                        if (m.text) {
+                            const t = getPlainText(m.text);
+                            let i2 = 0;
+                            while ((i2 = t.indexOf(query, i2)) !== -1) { count++; i2 += query.length; }
+                        }
+                        // 释义对应的例句
+                        if (m.examples) {
+                            for (const ex of m.examples) {
+                                if (ex.dialect) {
+                                    const t = getPlainText(ex.dialect);
+                                    let i2 = 0;
+                                    while ((i2 = t.indexOf(query, i2)) !== -1) { count++; i2 += query.length; }
+                                }
+                            }
+                        }
                     }
                 }
                 if (pinyinObj.entries) {
@@ -2555,15 +2574,6 @@
                                     while ((i2 = t.indexOf(query, i2)) !== -1) { count++; i2 += query.length; }
                                 }
                             }
-                        }
-                    }
-                }
-                if (pinyinObj.examples) {
-                    for (const ex of pinyinObj.examples) {
-                        if (ex.dialect) {
-                            const t = getPlainText(ex.dialect);
-                            let i2 = 0;
-                            while ((i2 = t.indexOf(query, i2)) !== -1) { count++; i2 += query.length; }
                         }
                     }
                 }
@@ -2785,15 +2795,40 @@
                 // 3. 检查释义匹配 - 使用纯文本，避免HTML标签匹配，并处理儿化音和图像标记
                 if (pinyinObj.meanings) {
                     for (const meaning of pinyinObj.meanings) {
-                        const plainMeaning = getPlainText(meaning);
-                        if (plainMeaning.includes(query)) {
-                            return true;
-                        }
-                        // 检查无声调拼音匹配（仅当查询不含声调时）
-                        if (!hasToneInQuery) {
-                            const queryNoTone = removeTones(queryLower);
-                            if (removeTones(plainMeaning.toLowerCase()).includes(queryNoTone)) {
+                        if (meaning.text) {
+                            const plainMeaning = getPlainText(meaning.text);
+                            if (plainMeaning.includes(query)) {
                                 return true;
+                            }
+                            // 检查无声调拼音匹配（仅当查询不含声调时）
+                            if (!hasToneInQuery) {
+                                const queryNoTone = removeTones(queryLower);
+                                if (removeTones(plainMeaning.toLowerCase()).includes(queryNoTone)) {
+                                    return true;
+                                }
+                            }
+                        }
+                        // 检查该释义下的例句
+                        if (meaning.examples) {
+                            for (const example of meaning.examples) {
+                                if (example.dialect) {
+                                    const plainDialect = getPlainText(example.dialect);
+                                    if (plainDialect.includes(query)) {
+                                        return true;
+                                    }
+                                    if (!hasToneInQuery) {
+                                        const queryNoTone = removeTones(queryLower);
+                                        if (removeTones(plainDialect.toLowerCase()).includes(queryNoTone)) {
+                                            return true;
+                                        }
+                                    }
+                                }
+                                if (example.translation) {
+                                    const plainTranslation = getPlainText(example.translation);
+                                    if (plainTranslation.includes(query)) {
+                                        return true;
+                                    }
+                                }
                             }
                         }
                     }
@@ -2891,32 +2926,7 @@
                     }
                 }
                 
-                // 5. 检查例句匹配 - 使用纯文本，并处理儿化音和图像标记
-                if (pinyinObj.examples) {
-                    for (const example of pinyinObj.examples) {
-                        if (example.dialect) {
-                            const plainDialect = getPlainText(example.dialect);
-                            if (plainDialect.includes(query)) {
-                                return true;
-                            }
-                            // 检查无声调拼音匹配（仅当查询不含声调时）
-                            if (!hasToneInQuery) {
-                                const queryNoTone = removeTones(queryLower);
-                                if (removeTones(plainDialect.toLowerCase()).includes(queryNoTone)) {
-                                    return true;
-                                }
-                            }
-                        }
-                        if (example.translation) {
-                            const plainTranslation = getPlainText(example.translation);
-                            if (plainTranslation.includes(query)) {
-                                return true;
-                            }
-                        }
-                    }
-                }
-                
-                // 6. 检查注意事项匹配 - 使用纯文本，并处理儿化音和图像标记
+                // 5. 检查注意事项匹配 - 使用纯文本，并处理儿化音和图像标记
                 if (pinyinObj.notes) {
                     const plainNotes = getPlainText(pinyinObj.notes);
                     if (plainNotes.includes(query)) {
@@ -3087,54 +3097,29 @@
                                 <div class="pinyin-text">${pinyinDisplay}</div>
                     `;
                     
-                    // 添加释义
+                    // 添加释义（每条释义后紧跟其例句）
                     if (pinyinObj.meanings && pinyinObj.meanings.length > 0) {
                         html += `<div class="meaning-container">`;
-                        
-                        // 显示所有释义
-                        pinyinObj.meanings.forEach((meaning, index) => {
-                            const meaningDisplay = processTextWithImages(meaning, false);
-                            html += `<div class="meaning-item">${meaningDisplay}</div>`;
-                            
-                            // 检查是否有针对当前释义的例句
-                            if (pinyinObj.examples && pinyinObj.examples.length > 0) {
-                                // 这里简单假设第一个例句对应第一个释义，以此类推
-                                if (pinyinObj.examples[index]) {
-                                    const example = pinyinObj.examples[index];
+                        pinyinObj.meanings.forEach((meaning) => {
+                            if (meaning.text) {
+                                const meaningDisplay = processTextWithImages(meaning.text, false);
+                                html += `<div class="meaning-item">${meaningDisplay}</div>`;
+                            }
+                            // 该释义对应的例句紧接其后
+                            if (meaning.examples && meaning.examples.length > 0) {
+                                html += `<div class="example-container">`;
+                                meaning.examples.forEach(example => {
                                     const dialectDisplay = processTextWithImages(example.dialect, false);
                                     const translationDisplay = processTextWithImages(example.translation, false);
-                                    
-                                    html += `<div class="example-container">`;
                                     html += `<div class="example-dialect">${dialectDisplay}</div>`;
                                     if (example.translation) {
                                         html += `<div class="example-translation">${translationDisplay}</div>`;
                                     }
-                                    html += `</div>`;
-                                }
+                                });
+                                html += `</div>`;
                             }
                         });
-                        
                         html += `</div>`;
-                    }
-                    
-                    // 添加普通例句（不是针对特定释义的）
-                    if (pinyinObj.examples && pinyinObj.examples.length > 0) {
-                        // 检查是否有未关联到释义的例句
-                        const totalMeanings = pinyinObj.meanings ? pinyinObj.meanings.length : 0;
-                        if (pinyinObj.examples.length > totalMeanings) {
-                            html += `<div class="example-container">`;
-                            for (let i = totalMeanings; i < pinyinObj.examples.length; i++) {
-                                const example = pinyinObj.examples[i];
-                                const dialectDisplay = processTextWithImages(example.dialect, false);
-                                const translationDisplay = processTextWithImages(example.translation, false);
-                                
-                                html += `<div class="example-dialect">${dialectDisplay}</div>`;
-                                if (example.translation) {
-                                    html += `<div class="example-translation">${translationDisplay}</div>`;
-                                }
-                            }
-                            html += `</div>`;
-                        }
                     }
                     
                     // 添加词条
@@ -3224,54 +3209,29 @@
                                 <div class="pinyin-text">${pinyinDisplay}</div>
                     `;
                     
-                    // 添加释义
+                    // 添加释义（每条释义后紧跟其例句）
                     if (pinyinObj.meanings && pinyinObj.meanings.length > 0) {
                         html += `<div class="meaning-container">`;
-                        
-                        // 显示所有释义
-                        pinyinObj.meanings.forEach((meaning, index) => {
-                            const meaningDisplay = highlightText(meaning, query, false);
-                            html += `<div class="meaning-item">${meaningDisplay}</div>`;
-                            
-                            // 检查是否有针对当前释义的例句
-                            if (pinyinObj.examples && pinyinObj.examples.length > 0) {
-                                // 这里简单假设第一个例句对应第一个释义，以此类推
-                                if (pinyinObj.examples[index]) {
-                                    const example = pinyinObj.examples[index];
+                        pinyinObj.meanings.forEach((meaning) => {
+                            if (meaning.text) {
+                                const meaningDisplay = highlightText(meaning.text, query, false);
+                                html += `<div class="meaning-item">${meaningDisplay}</div>`;
+                            }
+                            // 该释义对应的例句紧接其后
+                            if (meaning.examples && meaning.examples.length > 0) {
+                                html += `<div class="example-container">`;
+                                meaning.examples.forEach(example => {
                                     const dialectDisplay = highlightText(example.dialect, query, false);
                                     const highlightedTranslation = highlightText(example.translation, query, false);
-                                    
-                                    html += `<div class="example-container">`;
                                     html += `<div class="example-dialect">${dialectDisplay}</div>`;
                                     if (example.translation) {
                                         html += `<div class="example-translation">${highlightedTranslation}</div>`;
                                     }
-                                    html += `</div>`;
-                                }
+                                });
+                                html += `</div>`;
                             }
                         });
-                        
                         html += `</div>`;
-                    }
-                    
-                    // 添加普通例句（不是针对特定释义的）
-                    if (pinyinObj.examples && pinyinObj.examples.length > 0) {
-                        // 检查是否有未关联到释义的例句
-                        const totalMeanings = pinyinObj.meanings ? pinyinObj.meanings.length : 0;
-                        if (pinyinObj.examples.length > totalMeanings) {
-                            html += `<div class="example-container">`;
-                            for (let i = totalMeanings; i < pinyinObj.examples.length; i++) {
-                                const example = pinyinObj.examples[i];
-                                const dialectDisplay = highlightText(example.dialect, query, false);
-                                const highlightedTranslation = highlightText(example.translation, query, false);
-                                
-                                html += `<div class="example-dialect">${dialectDisplay}</div>`;
-                                if (example.translation) {
-                                    html += `<div class="example-translation">${highlightedTranslation}</div>`;
-                                }
-                            }
-                            html += `</div>`;
-                        }
                     }
                     
                     // 添加词条
