@@ -2168,8 +2168,8 @@
             // 允许的字符：汉字、拉丁字母（包括带声调的）、空格
             // 包括：ɑāáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜüŋ以及普通a-zA-Z
          // 增加CJK扩展A区汉字区间 
-          const blockPattern = /[^\u0000-\u007F\u2E80-\u3134Fɑŋāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜêü]/;
-  return blockPattern.test(str);
+         const validPattern = /^[\u2E80-\u2EFF\u3400-\u4DBF\u4E00-\u9FA5\uF900-\uFAFF\U00020000-\U0002A6DF\U0002A700-\U0002B73F\U0002B740-\U0002B81F\U0002B820-\U0002CEAF\U0002CEB0-\U0002EBEF\U00030000-\U0003134Fa-zA-Z\sɑāáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜüŋ𰻞𰻝]*$/;
+    return !validPattern.test(str);
 }
         
         // 处理ng与ŋ的互相转换 - 修复：只将ŋ转换为ng，但不将ng转换回ŋ
