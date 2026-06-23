@@ -2165,10 +2165,14 @@
         function containsInvalidChars(str) {
             if (!str) return false;
             
-            // 允许的字符：汉字、拉丁字母（包括带声调的）、空格
+            // 允许的字符：汉字（含各扩展区）、拉丁字母（包括带声调的）、空格
+            // CJK基本区 \u4e00-\u9fff
+            // CJK扩展A区 \u3400-\u4dbf（含㗑㞎等）
+            // CJK兼容汉字 \uf900-\ufaff
+            // CJK扩展B-G区（代理对形式）使用 \p{Unified_Ideograph} 的补充
+            // 由于JS的/u模式支持Unicode属性，改用 \p{Script=Han} 覆盖全部汉字
             // 包括：ɑāáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜüŋ以及普通a-zA-Z
-         // 增加CJK扩展A区汉字区间 
-const validPattern = /^[\u4e00-\u9fa5a-zA-Z\sɑāáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜüŋ]*$/;
+            const validPattern = /^[\p{Script=Han}a-zA-Z\sɑāáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜüŋ]*$/u;
             return !validPattern.test(str);
         }
         
@@ -2330,10 +2334,10 @@ const validPattern = /^[\u4e00-\u9fa5a-zA-Z\sɑāáǎàēéěèêūúǔùōóǒ�
         }
         
         // ============================================
-        // 工具函数：判断字符串是否全为汉字
+        // 工具函数：判断字符串是否全为汉字（含各Unicode扩展区）
         // ============================================
         function isAllChinese(str) {
-            return /^[\u4e00-\u9fa5]+$/.test(str);
+            return /^[\p{Script=Han}]+$/u.test(str);
         }
         
         // 工具函数：判断字符串是否为单个字母（a-z，不含声调）
