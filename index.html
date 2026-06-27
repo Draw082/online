@@ -3522,6 +3522,98 @@
             return false;
         }
 
+        // 工具函数：去掉文本中的儿化标记（儿' 和 儿）
+        function removeErhuaFromText(str) {
+            return str.replace(/儿'/g, '').replace(/儿/g, '');
+        }
+
+        // 工具函数：判断是否为拼音型搜索（不含汉字，且包含拼音字符）
+        function isPinyinQuery(query) {
+            // 如果包含汉字，不是纯拼音搜索
+            if (/[\p{Script=Han}]/u.test(query)) return false;
+            // 如果包含空格，可能是多音节拼音（如"ba ba"）
+            if (query.includes(' ')) return true;
+            // 检查是否包含拼音相关字符（声母、韵母、声调）
+            return /[a-zA-Zāáǎàēéěèêōóǒòīíǐìūúǔùǖǘǚǜüŋ]/.test(query);
+        }
+
+        // 工具函数：判断是否为词汇型搜索（>=2个汉字，或拼音中有空格）
+        function isVocabQuery(query) {
+            // >=2个汉字
+            const hanChars = query.match(/[\p{Script=Han}]/gu);
+            if (hanChars && hanChars.length >= 2) return true;
+            // 拼音中有空格（多音节）
+            if (query.includes(' ')) return true;
+            return false;
+        }
+
+        // 工具函数：获取拼音匹配等级（用于排序）
+        // 0 = 精确单字拼音匹配（拼音恰好等于查询，有声调/无声调完全匹配）
+        // 1 = 模糊单字拼音匹配（拼音包含查询，但不完全等于）
+        // 2 = 其他匹配
+        function getPinyinMatchLevel(item, query) {
+            const queryLower = query.toLowerCase();
+            const hasToneInQuery = hasToneMark(query);
+            let minLevel = 3; // 初始化为最大等级
+
+            for (const pinyinObj of item.pinyins) {
+                const pinyin = pinyinObj.pinyin;
+                const pinyinLower = pinyin.toLowerCase();
+
+                if (hasToneInQuery) {
+                    // 有声调查询：精确匹配
+                    if (pinyin === query) return 0; // 完全等于（有声调）
+                    if (pinyinLower === queryLower) return 0; // 完全等于（忽略大小写）
+                } else {
+                    // 无声调查询：去声调后比较
+                    const pinyinNoTone = removeTones(pinyinLower);
+                    const queryNoTone = removeTones(queryLower);
+                    if (pinyinNoTone === queryNoTone) return 0; // 去声调后完全等于
+                }
+
+                // 检查是否模糊匹配（包含但不完全等于）
+                if (hasToneInQuery) {
+                    if (pinyin.includes(query) || pinyinLower.includes(queryLower)) {
+                        minLevel = Math.min(minLevel, 1);
+                    }
+                } else {
+                    const pinyinNoTone = removeTones(pinyinLower);
+                    const queryNoTone = removeTones(queryLower);
+                    if (pinyinNoTone.includes(queryNoTone)) {
+                        minLevel = Math.min(minLevel, 1);
+                    }
+                }
+
+                // 检查词条拼音匹配等级
+                if (pinyinObj.entries) {
+                    for (const entry of pinyinObj.entries) {
+                        if (entry.entryPinyin) {
+                            const entryPinyin = entry.entryPinyin;
+                            const entryPinyinLower = entryPinyin.toLowerCase();
+
+                            if (hasToneInQuery) {
+                                if (entryPinyin === query || entryPinyinLower === queryLower) {
+                                    minLevel = Math.min(minLevel, 0);
+                                } else if (entryPinyin.includes(query) || entryPinyinLower.includes(queryLower)) {
+                                    minLevel = Math.min(minLevel, 1);
+                                }
+                            } else {
+                                const entryPinyinNoTone = removeTones(entryPinyinLower);
+                                const queryNoTone = removeTones(queryLower);
+                                if (entryPinyinNoTone === queryNoTone) {
+                                    minLevel = Math.min(minLevel, 0);
+                                } else if (entryPinyinNoTone.includes(queryNoTone)) {
+                                    minLevel = Math.min(minLevel, 1);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return minLevel === 3 ? 2 : minLevel; // 如果没有匹配，返回2（其他）
+        }
+
         // 修复：默认模式匹配函数 - 确保所有功能正常工作
         function matchesSearchDefault(item, query) {
             if (!query) return false;
@@ -3604,16 +3696,23 @@
                 // 检查词条匹配
                 if (pinyinObj.entries) {
                     for (const entry of pinyinObj.entries) {
-                        // 检查词条标题，将"儿'"替换为"儿"，图像标记转换为占位符再进行匹配
+                        // 检查词条标题，处理儿化音和图像标记，支持去儿化匹配
                         if (entry.title) {
                             let entryTitle = entry.title.replace(/儿'/g, '儿');
                             entryTitle = entryTitle.replace(/IMG:\w+/g, '[字]');
+                            // 精确匹配（含儿化标记的原始写法）
                             if (entryTitle.includes(query)) {
+                                return true;
+                            }
+                            // 去儿化后匹配：使"巴儿巴儿"和"巴巴"互相能搜到
+                            const entryTitleNoErhua = removeErhuaFromText(entryTitle);
+                            const queryNoErhua = removeErhuaFromText(query);
+                            if (entryTitleNoErhua.includes(queryNoErhua)) {
                                 return true;
                             }
                         }
                         
-                        // 检查词条拼音
+                        // 检查词条拼音（支持儿化音宽松匹配）
                         if (entry.entryPinyin) {
                             const entryPinyin = entry.entryPinyin;
                             const entryPinyinLower = entryPinyin.toLowerCase();
@@ -3636,16 +3735,25 @@
                             
                             // 如果查询包含声调标记，进行精确匹配
                             if (hasToneInQuery) {
-                                // 精确匹配：直接检查拼音字符串是否包含查询字符串
                                 if (entryPinyin.includes(query)) {
                                     return true;
                                 }
+                                // 儿化音宽松匹配：去掉词尾的 r 再试
+                                const entryPinyinNoR = entryPinyinLower.replace(/r\b/g, '').replace(/  +/g, ' ').trim();
+                                if (entryPinyinNoR.includes(queryLower)) {
+                                    return true;
+                                }
                             } else {
-                                // 无声调匹配：检查无声调拼音匹配
+                                // 无声调匹配：先去声调，再去儿化 r，再比较
                                 const entryPinyinNoTone = removeTones(entryPinyinLower);
                                 const queryNoTone = removeTones(queryLower);
                                 
                                 if (entryPinyinNoTone.includes(queryNoTone)) {
+                                    return true;
+                                }
+                                // 儿化音宽松匹配：去声调后再去掉词尾的 r
+                                const entryPinyinNoToneNoR = entryPinyinNoTone.replace(/r\b/g, '').replace(/  +/g, ' ').trim();
+                                if (entryPinyinNoToneNoR.includes(queryNoTone)) {
                                     return true;
                                 }
                             }
@@ -3766,16 +3874,23 @@
                 // 4. 检查词条匹配
                 if (pinyinObj.entries) {
                     for (const entry of pinyinObj.entries) {
-                        // 检查词条标题，处理儿化音和图像标记
+                        // 检查词条标题，处理儿化音和图像标记，支持去儿化匹配
                         if (entry.title) {
                             let entryTitle = entry.title.replace(/儿'/g, '儿');
                             entryTitle = entryTitle.replace(/IMG:\w+/g, '[字]');
+                            // 精确匹配（含儿化标记的原始写法）
                             if (entryTitle.includes(query)) {
+                                return true;
+                            }
+                            // 去儿化后匹配：使"巴儿巴儿"和"巴巴"互相能搜到
+                            const entryTitleNoErhua = removeErhuaFromText(entryTitle);
+                            const queryNoErhua = removeErhuaFromText(query);
+                            if (entryTitleNoErhua.includes(queryNoErhua)) {
                                 return true;
                             }
                         }
                         
-                        // 检查词条拼音
+                        // 检查词条拼音（支持儿化音宽松匹配）
                         if (entry.entryPinyin) {
                             const entryPinyin = entry.entryPinyin;
                             const entryPinyinLower = entryPinyin.toLowerCase();
@@ -3798,16 +3913,25 @@
                             
                             // 如果查询包含声调标记，进行精确匹配
                             if (hasToneInQuery) {
-                                // 精确匹配：直接检查拼音字符串是否包含查询字符串
                                 if (entryPinyin.includes(query)) {
                                     return true;
                                 }
+                                // 儿化音宽松匹配：去掉词尾的 r 再试
+                                const entryPinyinNoR = entryPinyinLower.replace(/r\b/g, '').replace(/  +/g, ' ').trim();
+                                if (entryPinyinNoR.includes(queryLower)) {
+                                    return true;
+                                }
                             } else {
-                                // 无声调匹配：检查无声调拼音匹配
+                                // 无声调匹配：先去声调，再去儿化 r，再比较
                                 const entryPinyinNoTone = removeTones(entryPinyinLower);
                                 const queryNoTone = removeTones(queryLower);
                                 
                                 if (entryPinyinNoTone.includes(queryNoTone)) {
+                                    return true;
+                                }
+                                // 儿化音宽松匹配：去声调后再去掉词尾的 r
+                                const entryPinyinNoToneNoR = entryPinyinNoTone.replace(/r\b/g, '').replace(/  +/g, ' ').trim();
+                                if (entryPinyinNoToneNoR.includes(queryNoTone)) {
                                     return true;
                                 }
                             }
@@ -3953,6 +4077,54 @@
                 const exactFirst = results.filter(item => hasPinyinExactlyLetter(item, query));
                 const rest = results.filter(item => !hasPinyinExactlyLetter(item, query));
                 results = exactFirst.concat(rest);
+            }
+            
+            // 拼音搜索排序：优先显示拼音精确匹配的条目
+            if (isPinyinQuery(query) && !query.includes(' ')) {
+                // 单音节拼音搜索：按匹配等级排序（0=精确匹配 > 1=模糊匹配 > 2=其他）
+                results.sort((a, b) => getPinyinMatchLevel(a, query) - getPinyinMatchLevel(b, query));
+            }
+            
+            // 词汇搜索排序：去除儿化后匹配的优先显示
+            if (isVocabQuery(query)) {
+                // 将去除儿化后能匹配的条目排在前面
+                const exactMatch = [];
+                const erhuaMatch = [];
+                const otherMatch = [];
+                
+                for (const item of results) {
+                    let hasExact = false;
+                    let hasErhua = false;
+                    // 检查是否有去除儿化后匹配的条目
+                    for (const pinyinObj of item.pinyins) {
+                        if (pinyinObj.entries) {
+                            for (const entry of pinyinObj.entries) {
+                                if (entry.title) {
+                                    let entryTitle = entry.title.replace(/儿'/g, '儿').replace(/IMG:\w+/g, '[字]');
+                                    const entryTitleNoErhua = removeErhuaFromText(entryTitle);
+                                    const queryNoErhua = removeErhuaFromText(query);
+                                    if (entryTitle.includes(query)) {
+                                        // 精确匹配（含儿化标记的原始写法）
+                                        hasExact = true;
+                                    } else if (entryTitleNoErhua.includes(queryNoErhua)) {
+                                        // 去除儿化后匹配
+                                        hasErhua = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (hasExact) {
+                        exactMatch.push(item);
+                    } else if (hasErhua) {
+                        erhuaMatch.push(item);
+                    } else {
+                        otherMatch.push(item);
+                    }
+                }
+                
+                results = exactMatch.concat(erhuaMatch).concat(otherMatch);
             }
             
             // 显示结果
