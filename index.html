@@ -8370,7 +8370,7 @@
             // CJK扩展B-G区（代理对形式）使用 \p{Unified_Ideograph} 的补充
             // 由于JS的/u模式支持Unicode属性，改用 \p{Script=Han} 覆盖全部汉字
             // 包括：ɑāáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜüŋ以及普通a-zA-Z
-            const validPattern = /^[\p{Script=Han}a-zA-Z\sɑāáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜüŋ]*$/u;
+            const validPattern = /^[\p{Script=Han}a-zA-Z\sɑāáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜüŋɑ̄ɑ́ɑ̌ɑ̀ɑ̉ỏẻỉủü̉]*$/u;
             return !validPattern.test(str);
         }
         
