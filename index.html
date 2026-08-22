@@ -8416,12 +8416,12 @@
             if (!pinyin) return '';
             // 移除所有音调符号，但保留ŋ
             return pinyin
-                .replace(/[āáǎàɑ]/g, 'a')
-                .replace(/[ēéěèê]/g, 'e')
-                .replace(/[īíǐì]/g, 'i')
-                .replace(/[ōóǒò]/g, 'o')
-                .replace(/[ūúǔù]/g, 'u')
-                .replace(/[ǖǘǚǜü]/g, 'v')
+                .replace(/[āáǎàɑɑ̄ɑ́ɑ̌ɑ̀ɑ̉]/g, 'a')
+                .replace(/[ēéěèêẻ]/g, 'e')
+                .replace(/[īíǐìỉ]/g, 'i')
+                .replace(/[ōóǒòỏ]/g, 'o')
+                .replace(/[ūúǔùủ]/g, 'u')
+                .replace(/[ǖǘǚǜüü̉]/g, 'v')
                 .replace(/[g]/g, 'ɡ');
         }
         
@@ -8429,7 +8429,7 @@
         function hasToneMark(str) {
             if (!str) return false;
             // 检查是否包含带声调的字母
-            const tonePattern = /[āáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜ]/;
+            const tonePattern = /[āáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜɑ̄ɑ́ɑ̌ɑ̀ɑ̉ỏẻỉủü̉]/;
             return tonePattern.test(str);
         }
         
