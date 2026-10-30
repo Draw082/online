@@ -14,10 +14,9 @@
     --shadow: 0 5px 15px rgba(0,0,0,0.2);
 
     /* 字体栈：电脑端命中本地楷/宋/隶，手机端回退网络字体 */
-      --font-kai:  "SiteLatin", "SiteEllipsisKai", "SiteKai",  "LXGW WenKai", "LXGW WenKai GB", serif;
-    --font-song: "SiteLatin", "SiteEllipsisKai", "SiteSong", "Noto Serif SC", serif;
-    --font-lisu: "SiteLatin", "SiteEllipsisKai", "SiteLiSu", "LXGW WenKai", "LXGW WenKai GB", serif;
-}
+    --font-kai:  "SiteEllipsisKai", "SiteRare", "SiteKai",  "LXGW WenKai", "LXGW WenKai GB", serif;
+--font-song: "SiteEllipsisKai", "SiteRare", "SiteSong", "Noto Serif SC", serif;
+--font-lisu: "SiteEllipsisKai", "SiteRare", "SiteLiSu", "LXGW WenKai", "LXGW WenKai GB", serif;
 
 * {
     margin: 0;
@@ -790,4 +789,19 @@ footer {
     .page-404 h1 {
         font-size: 3rem;
     }
+}
+/* =========================================================
+   拼音/英文专属：强制首选 Times 系列字体，绝对不向中文字体回退
+   ========================================================= */
+.pinyin-text,
+.entry-pinyin,
+.search-input,
+.search-btn,
+.search-mode-select,
+.search-mode-label,
+.mode-description,
+.header-info,
+.logo-text p,
+.example-word {
+    font-family: "Times New Roman", "Nimbus Roman", "Liberation Serif", "STIXGeneral", Times, serif !important;
 }
