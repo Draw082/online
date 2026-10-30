@@ -1,0 +1,45 @@
+/* =========================================================
+   字体加载
+   1) 霞鹜文楷：完整分包 CDN，按字符自动加载，支持后续新增字
+   2) GB 版兜底：覆盖大陆规范字形
+   3) 本地字体族：电脑端优先命中系统楷/宋/隶
+   ========================================================= */
+
+@import url("https://cdn.jsdelivr.net/npm/@callmebill/lxgw-wenkai-web@latest/style.css");
+@import url("https://cdn.jsdelivr.net/npm/lxgw-wenkai-gb-web@latest/style.css");
+
+/* ---- SiteLatin：拉丁字母/拼音子集，从原 index.html 原样剪切过来（含 base64） ---- */
+@font-face {
+    font-family: "SiteLatin";
+    src: local("TH-Times"), local("Times New Roman"),
+         url("data:font/woff2;base64,...") format("woff2");
+    unicode-range: U+0020-007E, U+00A0-024F, U+0250-02AF, U+0300-036F, U+1E00-1EFF;
+    font-display: swap;
+}
+
+/* ---- SiteEllipsisKai：只负责中文省略号 ……，从原文件原样剪切 ---- */
+@font-face {
+    font-family: "SiteEllipsisKai";
+    src: local("楷体"), local("KaiTi"), local("STKaiti"),
+         url("https://registry.npmmirror.com/lxgw-wenkai-webfont/1.7.0/files/files/lxgwwenkai-regular-subset-114.woff2") format("woff2");
+    unicode-range: U+2026;
+    font-display: swap;
+}
+
+/* ---- SiteKai：关键改动 —— 去掉 base64，只留本地楷体 ----
+   这样手机端没有本地楷体时，会自然落到后面的 "LXGW WenKai"（完整分包 CDN），
+   后续新增的任何字都能显示。 */
+@font-face {
+    font-family: "SiteKai";
+    src: local("楷体"), local("KaiTi"), local("STKaiti");
+}
+
+/* ---- SiteSong / SiteLiSu：原样保留 ---- */
+@font-face {
+    font-family: "SiteSong";
+    src: local("宋体"), local("SimSun"), local("NSimSun"), local("STSong"), local("Songti SC");
+}
+@font-face {
+    font-family: "SiteLiSu";
+    src: local("隶书"), local("LiSu"), local("STLiti");
+}
