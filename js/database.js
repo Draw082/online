@@ -4490,7 +4490,7 @@ window.DIALECT_DATABASE_TEXT = `
 [释义]IMG:5 惠及自身的利益，恩惠。
 
 [汉字]𱴨
-[拼音]IMG:2 ŋěn IMG:3 ěn
+[拼音]IMG:2 ŋén IMG:3 én
 [释义]IMG:6 身体等接触到硬物或凸起而感到难受。也说【硌】。
 
 [汉字]摁
