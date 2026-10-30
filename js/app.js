@@ -68,7 +68,38 @@ injectRareFontFace();
     /* =========================================================
        文本处理工具
        ========================================================= */
+       /* =========================================================
+       全局图像替换：让页面所有地方都支持 IMG:xxx 写法
+       ========================================================= */
+    function applyGlobalImages() {
+        // 创建一个遍历器，遍历整个 body
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+            acceptNode: function (node) {
+                // 跳过 script、style、textarea、title 等标签内的文本
+                if (node.parentElement.tagName.match(/^(SCRIPT|STYLE|TEXTAREA|TITLE)$/i)) {
+                    return NodeFilter.FILTER_REJECT;
+                }
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        });
 
+        const nodes = [];
+        while (walker.nextNode()) {
+            if (walker.currentNode.nodeValue.includes('IMG:')) {
+                nodes.push(walker.currentNode);
+            }
+        }
+
+        // 遍历找到的文本节点，进行替换
+        nodes.forEach(node => {
+            const text = node.nodeValue;
+            const span = document.createElement('span');
+            // 把 IMG:xxx 变成 img 标签，使用 inline-img-char 样式（高度 1em 自动缩放）
+            span.innerHTML = text.replace(/IMG:(\w+)/g, '<img src="images/$1.png" alt="图片" class="inline-img-char">');
+            node.parentNode.replaceChild(span, node);
+        });
+    }
+   
     // 儿化标记 儿' → 小字儿
     function processErhua(text) {
         if (!text) return text;
@@ -746,8 +777,11 @@ injectRareFontFace();
         }
     });
 
-    // 初始化
+       // 初始化
     switchPage('home');
     searchInput.value = '';
     showInitialMessage();
+
+    // 执行全局图片替换（让 HTML 里的 IMG:xxx 生效）
+    applyGlobalImages();
 })();
