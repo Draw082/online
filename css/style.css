@@ -68,12 +68,14 @@ body {
     margin-right: 5px;
 }
 
+/* 特殊汉字图片样式 - 标题大小 */
 .inline-img-char {
     display: inline-block;
-    height: 1em;
-    width: auto;
-    vertical-align: middle;
-    margin: 0 1px;
+    height: 1.1em; /* 稍微放大一点，和旁边的汉字视觉大小更匹配 */
+    width: auto; 
+    vertical-align: -0.15em; /* 关键：把图片往下压一点，使其底部与旁边的文字平齐 */
+    margin: 0 2px; 
+    mix-blend-mode: multiply; /* 关键：正片叠底，尝试让图片的浅色底色融入深色背景 */
 }
 
 /* 儿化小字 */
