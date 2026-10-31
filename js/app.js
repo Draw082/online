@@ -1,6 +1,6 @@
 /* =========================================================
-   中山韵典在线 · 交互逻辑
-   依赖：js/database.js（window.DIALECT_DATABASE_TEXT / parseDialectDatabase）
+   中山韵典在线 · 交互逻辑（完整修复版）
+   依赖：js/database.js
    ========================================================= */
 
 (function () {
@@ -8,33 +8,32 @@
 
     const dialectDatabase = window.parseDialectDatabase(window.DIALECT_DATABASE_TEXT || '');
 
-/* ---- 为生僻字动态注入 SiteRare 的 @font-face ---- */
-function injectRareFontFace() {
-    const chars = window.RARE_CHARS || [];
-    if (!chars.length) return;
+    /* ---- 为生僻字动态注入 SiteRare 的 @font-face ---- */
+    function injectRareFontFace() {
+        const chars = window.RARE_CHARS || [];
+        if (!chars.length) return;
 
-    // 汉字 → 码点，多个用逗号分隔
-    const ranges = chars
-        .filter((ch) => typeof ch === 'string' && ch)
-        .map((ch) => 'U+' + ch.codePointAt(0).toString(16).toUpperCase())
-        .join(', ');
+        const ranges = chars
+            .filter((ch) => typeof ch === 'string' && ch)
+            .map((ch) => 'U+' + ch.codePointAt(0).toString(16).toUpperCase())
+            .join(', ');
 
-    if (!ranges) return;
+        if (!ranges) return;
 
-    const style = document.createElement('style');
-    style.textContent = `
-        @font-face {
-            font-family: "SiteRare";
-            src: url("font/TH-Tshyn-P1.ttf") format("truetype"),
-            url("https://fonts4speak-1509099110.cos.ap-beijing.myqcloud.com/TH-Tshyn-P1.ttf") format("truetype");
-            unicode-range: ${ranges};
-            font-display: swap;
-        }
-    `;
-    document.head.appendChild(style);
-}
-injectRareFontFace();
-
+        const style = document.createElement('style');
+        style.textContent = `
+            @font-face {
+                font-family: "SiteRare";
+                src: local("TH-Tshyn-P1"),
+                     url("font/TH-Tshyn-P1.ttf") format("truetype"),
+                     url("https://fonts4speak-1509099110.cos.ap-beijing.myqcloud.com/TH-Tshyn-P1.ttf") format("truetype");
+                unicode-range: ${ranges};
+                font-display: block;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    injectRareFontFace();
 
     /* ---------------- DOM ---------------- */
     const searchInput      = document.getElementById('searchInput');
@@ -66,53 +65,37 @@ injectRareFontFace();
     let currentSearchMode  = 'default';
 
     /* =========================================================
-       文本处理工具
+       工具函数
        ========================================================= */
-       // 严格判断单个音节是否匹配
     function isSyllableMatch(pSyl, query) {
         let p = pSyl.toLowerCase();
         let q = query.toLowerCase();
-
-        // 判断用户输入的是否带有声调或特殊字符（如 ê, ɑ）
         const hasToneOrSpecial = /[āáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜɑ\u0300-\u036F]/i.test(q);
 
         if (hasToneOrSpecial) {
-            // 1. 带调输入：必须严格相等
             if (p === q) return true;
-            
-            // 2. 处理组合声调符等价（如输入 ā，词典里是 ɑ̄）
             if (canonicalTonePinyin(p) === canonicalTonePinyin(q)) return true;
-
-            // 3. 针对 ê 的特例：输入 ê 应该能匹配 ê 以及 ê 上面带其他调号的组合（如 ê̄）
             if (q === 'ê') {
                 return p.normalize('NFD').startsWith('e\u0302');
             }
             return false;
         } else {
-            // 无调输入：去掉所有调号、把 ɑ 转 a，ŋ 转 ng，ê 转 e，然后比较
             let pBase = p.normalize('NFD').replace(/[\u0300-\u036F]/g, '').replace(/ɑ/g, 'a').replace(/ŋ/g, 'ng');
             let qBase = q.normalize('NFD').replace(/[\u0300-\u036F]/g, '').replace(/ɑ/g, 'a').replace(/ŋ/g, 'ng');
-            
             if (pBase === qBase) return true;
-            
-            // 容错：允许漏打儿化音的 r（如输入 en 匹配 enr）
             if (pBase.replace(/r$/, '') === qBase) return true;
-
             return false;
         }
     }
 
-    // 整体拼音字符串匹配（按空格拆分音节，禁止跨音节）
     function matchPinyinString(pinyinRaw, query) {
         if (!pinyinRaw) return false;
         const p = pinyinRaw.toLowerCase().trim();
         const q = query.toLowerCase().trim();
 
-        // 如果查询词带空格（用户搜的是多音节词，如 "en de"）
         if (q.includes(' ')) {
             const pSyls = p.split(/\s+/);
             const qSyls = q.split(/\s+/);
-            // 滑动窗口匹配连续的多个音节
             for (let i = 0; i <= pSyls.length - qSyls.length; i++) {
                 let match = true;
                 for (let j = 0; j < qSyls.length; j++) {
@@ -124,53 +107,40 @@ injectRareFontFace();
                 if (match) return true;
             }
             return false;
-        } 
-        // 如果查询词无空格（单音节）
-        else {
+        } else {
             const pSyls = p.split(/\s+/);
-            // 只要词条拼音的任意一个音节匹配上了，就算命中
             return pSyls.some(syl => isSyllableMatch(syl, q));
         }
     }
-       /* =========================================================
-       全局图像替换：让页面所有地方都支持 IMG:xxx 写法
-       ========================================================= */
+
     function applyGlobalImages() {
-        // 创建一个遍历器，遍历整个 body
         const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
             acceptNode: function (node) {
-                // 跳过 script、style、textarea、title 等标签内的文本
                 if (node.parentElement.tagName.match(/^(SCRIPT|STYLE|TEXTAREA|TITLE)$/i)) {
                     return NodeFilter.FILTER_REJECT;
                 }
                 return NodeFilter.FILTER_ACCEPT;
             }
         });
-
         const nodes = [];
         while (walker.nextNode()) {
             if (walker.currentNode.nodeValue.includes('IMG:')) {
                 nodes.push(walker.currentNode);
             }
         }
-
-        // 遍历找到的文本节点，进行替换
         nodes.forEach(node => {
             const text = node.nodeValue;
             const span = document.createElement('span');
-            // 把 IMG:xxx 变成 img 标签，使用 inline-img-char 样式（高度 1em 自动缩放）
             span.innerHTML = text.replace(/IMG:(\w+)/g, '<img src="images/$1.png" alt="图片" class="inline-img-char">');
             node.parentNode.replaceChild(span, node);
         });
     }
-   
-    // 儿化标记 儿' → 小字儿
+
     function processErhua(text) {
         if (!text) return text;
         return text.replace(/儿'/g, '<span class="erhua-char">儿</span>');
     }
 
-    // IMG:charX → <img>
     function replaceImageMarkers(text, isTitle) {
         if (!text) return text;
         const cls = isTitle ? 'character-img' : 'inline-img-char';
@@ -178,13 +148,11 @@ injectRareFontFace();
             (m, name) => `<img src="images/${name}.png" alt="图片" class="${cls}">`);
     }
 
-    // 先图像、后儿化
     function processTextWithImages(text, isTitle) {
         if (!text) return text;
         return processErhua(replaceImageMarkers(text, isTitle));
     }
 
-    // 去声调（保留 ŋ → g 用于旧逻辑，但这里同时把 ŋ 统一成 ng 前的形式）
     function removeTones(pinyin) {
         if (!pinyin) return '';
         return pinyin
@@ -198,7 +166,6 @@ injectRareFontFace();
             .replace(/[\u0300-\u036F]/g, '');
     }
 
-    // 声调规范化：预组合字符与组合声调符统一成「基字母+数字」
     function canonicalTonePinyin(str) {
         if (!str) return '';
         let s = str.toLowerCase().normalize('NFD');
@@ -219,14 +186,12 @@ injectRareFontFace();
         return /[āáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜ\u0300-\u036F]/.test(str || '');
     }
 
-    // 纯文本：去 HTML、去图像标记、儿化标记还原为「儿」
     function getPlainText(text) {
         if (!text) return '';
         let s = text.replace(/儿'/g, '儿').replace(/IMG:\w+/g, '[字]');
         return s.replace(/<[^>]*>/g, '');
     }
 
-    // 高亮（先图像/儿化，再按文本节点替换，避免破坏 HTML）
     function highlightText(text, query, isTitle) {
         if (!text) return '';
         const processed = processTextWithImages(text, isTitle);
@@ -253,20 +218,10 @@ injectRareFontFace();
         return temp.innerHTML;
     }
 
-    /* =========================================================
-       输入校验
-       ========================================================= */
-
     function containsInvalidChars(str) {
         if (!str) return false;
-        // 汉字（含扩展区）+ 拉丁字母（含带声调）+ 空格 + 组合声调符
         const valid = /^[\p{Script=Han}a-zA-Z\sɑāáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜüŋ\u0300-\u036F]*$/u;
         return !valid.test(str);
-    }
-
-    function normalizeNgToEng(str) {
-        if (!str) return '';
-        return str.replace(/ŋ/g, 'ng').replace(/Ŋ/g, 'NG');
     }
 
     function showInputAlert(message) {
@@ -279,10 +234,6 @@ injectRareFontFace();
         inputAlertModal.classList.remove('show');
         document.body.style.overflow = 'auto';
     }
-
-    /* =========================================================
-       查询条件工具
-       ========================================================= */
 
     function isAllChinese(str) {
         return /^[\p{Script=Han}]+$/u.test(str);
@@ -333,9 +284,7 @@ injectRareFontFace();
             let i = 0;
             while ((i = t.indexOf(query, i)) !== -1) { count++; i += query.length; }
         };
-
         scan(getCharacterText(item));
-
         for (const py of item.pinyins) {
             (py.meanings || []).forEach((m) => {
                 scan(m.text);
@@ -364,7 +313,7 @@ injectRareFontFace();
     function removeErhuaFromText(str) {
         return str.replace(/儿'/g, '').replace(/儿/g, '');
     }
-       // 使用 fanti 库进行繁简转换
+
     function toSimplified(str) {
         if (!str) return '';
         if (typeof fanti === 'undefined' || !fanti.toJianti) {
@@ -380,16 +329,12 @@ injectRareFontFace();
         const check = (pinyinRaw) => {
             if (!pinyinRaw) return 3;
             const p = pinyinRaw.toLowerCase().trim();
-            
-            // 整体完全一致，直接最高优先级
             if (p === q || canonicalTonePinyin(p) === canonicalTonePinyin(q)) return 0;
             
             if (q.includes(' ')) {
-                // 多音节词，如果 matchPinyinString 通过了，就算比较高的匹配
                 return matchPinyinString(p, q) ? 0 : 3;
             } else {
                 const pSyls = p.split(/\s+/);
-                // 如果存在某个音节，经过去调和声调转换后，跟查询词完全相等，排第一
                 if (pSyls.some(syl => {
                     if (syl === q) return true;
                     if (!qHasTone && removeTones(syl) === removeTones(q)) return true;
@@ -397,7 +342,6 @@ injectRareFontFace();
                 })) {
                     return 0;
                 }
-                // 如果只是模糊匹配上了（比如带不带调的区别），排第二
                 if (pSyls.some(syl => isSyllableMatch(syl, q))) {
                     return 1;
                 }
@@ -416,24 +360,21 @@ injectRareFontFace();
     }
 
     /* =========================================================
-       匹配：默认模式 / 反查模式
+       匹配逻辑
        ========================================================= */
-
-       function matchesSearchDefault(item, query) {
+    function matchesSearchDefault(item, query) {
         if (!query) return false;
         if (!allowsSpecialEntry(item, query)) return false;
 
         const q = query.toLowerCase();
         const qHasTone = hasToneMark(query);
-        const queryS = toSimplified(query); // 把搜索词转成简体
+        const queryS = toSimplified(query);
 
-        // 单个汉字：只查 [汉字] 字段
         if (isAllChinese(query) && [...query].length === 1) {
             return typeof item.character === 'string' &&
                    toSimplified(getCharacterText(item)).includes(queryS);
         }
 
-        // 字头匹配
         if (typeof item.character === 'string') {
             if (toSimplified(getCharacterText(item)).includes(queryS)) return true;
         } else if (item.character.type === 'img') {
@@ -450,10 +391,9 @@ injectRareFontFace();
 
                 if (e.title) {
                     const title = e.title.replace(/儿'/g, '儿').replace(/IMG:\w+/g, '[字]');
-                    const titleS = toSimplified(title); // 把词条标题转成简体
+                    const titleS = toSimplified(title);
                     
                     if (titleS.includes(queryS)) return true;
-                    
                     if (removeErhuaFromText(titleS).includes(removeErhuaFromText(queryS))) return true;
 
                     const cleanTitle = titleS.replace(/[^\p{Script=Han}a-zA-Z]/gu, '').toLowerCase();
@@ -462,20 +402,21 @@ injectRareFontFace();
                 }
             }
         }
+        return false;
+    }
 
     function matchesSearchReverse(item, query) {
         if (!query) return false;
         if (!allowsSpecialEntry(item, query)) return false;
-
         if (matchesSearchDefault(item, query)) return true;
 
         const q = query.toLowerCase();
         const qHasTone = hasToneMark(query);
 
-              const textMatch = (s) => {
+        const textMatch = (s) => {
             if (!s) return false;
-            const t = toSimplified(getPlainText(s)); // 释义转简体
-            const qS = toSimplified(query);          // 搜索词转简体
+            const t = toSimplified(getPlainText(s));
+            const qS = toSimplified(query);
             if (t.includes(qS)) return true;
             if (!qHasTone && removeTones(t.toLowerCase()).includes(removeTones(qS.toLowerCase()))) return true;
             return false;
@@ -489,7 +430,6 @@ injectRareFontFace();
                     if (textMatch(ex.translation)) return true;
                 }
             }
-
             for (const e of (py.entries || [])) {
                 if (textMatch(e.definition)) return true;
                 for (const ex of (e.examples || [])) {
@@ -497,17 +437,14 @@ injectRareFontFace();
                     if (textMatch(ex.translation)) return true;
                 }
             }
-
             if (textMatch(py.notes)) return true;
         }
-
         return false;
     }
 
     /* =========================================================
        渲染
        ========================================================= */
-
     function showInitialMessage() {
         resultsContainer.innerHTML = `
             <div class="no-results" id="initialMessage">
@@ -621,14 +558,12 @@ injectRareFontFace();
                 </p>
             </div>
         `;
-
         resultsContainer.innerHTML = head + shown.map((item) => renderEntry(item, '')).join('');
     }
 
     /* =========================================================
        404 / 页面切换 / 弹窗
        ========================================================= */
-
     function switchTo404() {
         document.querySelector('header').style.display = 'none';
         document.querySelector('nav').style.display = 'none';
@@ -641,7 +576,6 @@ injectRareFontFace();
 
         page404.style.display = 'flex';
         document.body.style.overflow = 'hidden';
-
         [navHome, navGrammar, navAbout].forEach((a) => a && a.classList.remove('active'));
     }
 
@@ -680,7 +614,6 @@ injectRareFontFace();
     /* =========================================================
        搜索入口
        ========================================================= */
-
     function searchDialect(query, mode) {
         if (!query || !query.trim()) {
             showInitialMessage();
@@ -707,28 +640,23 @@ injectRareFontFace();
         const matcher = mode === 'reverse' ? matchesSearchReverse : matchesSearchDefault;
         let results = dialectDatabase.filter((item) => matcher(item, query));
 
-        // 多汉字：匹配次数多的优先
         if (isAllChinese(query) && [...query].length > 1) {
             results.sort((a, b) => countChineseMatches(b, query) - countChineseMatches(a, query));
         }
 
-        // 单字母：拼音刚好等于该字母的优先
         if (isSingleLetter(query)) {
             const exact = results.filter((i) => hasPinyinExactlyLetter(i, query));
             const rest  = results.filter((i) => !hasPinyinExactlyLetter(i, query));
             results = exact.concat(rest);
         }
 
-        // 单音节拼音：精确匹配优先
         if (isPinyinQuery(query) && !query.includes(' ')) {
             results.sort((a, b) => getPinyinMatchLevel(a, query) - getPinyinMatchLevel(b, query));
         }
 
-        // 词汇：去掉儿化后能匹配的优先
         if (isVocabQuery(query)) {
             const exact = [], erhua = [], other = [];
             const qNoErhua = removeErhuaFromText(query);
-
             results.forEach((item) => {
                 let hasExact = false, hasErhua = false;
                 item.pinyins.forEach((py) => {
@@ -743,7 +671,6 @@ injectRareFontFace();
                 else if (hasErhua) erhua.push(item);
                 else other.push(item);
             });
-
             results = exact.concat(erhua, other);
         }
 
@@ -763,9 +690,8 @@ injectRareFontFace();
     }
 
     /* =========================================================
-       事件绑定
+       事件绑定 & 初始化
        ========================================================= */
-
     searchBtn.addEventListener('click', () => {
         searchDialect(searchInput.value.trim(), currentSearchMode);
     });
@@ -787,7 +713,6 @@ injectRareFontFace();
         else showInitialMessage();
     });
 
-    // 看看运气
     const luckyPool = dialectDatabase
         .map((e) => e.character)
         .filter((c) => typeof c === 'string' && [...c].length === 1 && !/[\uE000-\uF8FF]/.test(c));
@@ -810,12 +735,10 @@ injectRareFontFace();
         });
     });
 
-    // 导航
     navHome.addEventListener('click', (e) => { e.preventDefault(); switchPage('home'); });
     navAbout.addEventListener('click', (e) => { e.preventDefault(); switchPage('about'); });
     navGrammar.addEventListener('click', (e) => { e.preventDefault(); showModal(); });
 
-    // 捐赠弹窗
     modalConfirm.addEventListener('click', () => {
         hideModal();
         window.open(PDF_LINK, '_blank');
@@ -828,7 +751,6 @@ injectRareFontFace();
         if (e.target === grammarModal) hideModal();
     });
 
-    // 输入提示弹窗
     inputAlertConfirm.addEventListener('click', hideInputAlert);
     inputAlertModal.addEventListener('click', (e) => {
         if (e.target === inputAlertModal) hideInputAlert();
@@ -841,11 +763,8 @@ injectRareFontFace();
         }
     });
 
-       // 初始化
     switchPage('home');
     searchInput.value = '';
     showInitialMessage();
-
-    // 执行全局图片替换（让 HTML 里的 IMG:xxx 生效）
     applyGlobalImages();
 })();
