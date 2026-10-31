@@ -68,6 +68,70 @@ injectRareFontFace();
     /* =========================================================
        文本处理工具
        ========================================================= */
+       // 严格判断单个音节是否匹配
+    function isSyllableMatch(pSyl, query) {
+        let p = pSyl.toLowerCase();
+        let q = query.toLowerCase();
+
+        // 判断用户输入的是否带有声调或特殊字符（如 ê, ɑ）
+        const hasToneOrSpecial = /[āáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜɑ\u0300-\u036F]/i.test(q);
+
+        if (hasToneOrSpecial) {
+            // 1. 带调输入：必须严格相等
+            if (p === q) return true;
+            
+            // 2. 处理组合声调符等价（如输入 ā，词典里是 ɑ̄）
+            if (canonicalTonePinyin(p) === canonicalTonePinyin(q)) return true;
+
+            // 3. 针对 ê 的特例：输入 ê 应该能匹配 ê 以及 ê 上面带其他调号的组合（如 ê̄）
+            if (q === 'ê') {
+                return p.normalize('NFD').startsWith('e\u0302');
+            }
+            return false;
+        } else {
+            // 无调输入：去掉所有调号、把 ɑ 转 a，ŋ 转 ng，ê 转 e，然后比较
+            let pBase = p.normalize('NFD').replace(/[\u0300-\u036F]/g, '').replace(/ɑ/g, 'a').replace(/ŋ/g, 'ng');
+            let qBase = q.normalize('NFD').replace(/[\u0300-\u036F]/g, '').replace(/ɑ/g, 'a').replace(/ŋ/g, 'ng');
+            
+            if (pBase === qBase) return true;
+            
+            // 容错：允许漏打儿化音的 r（如输入 en 匹配 enr）
+            if (pBase.replace(/r$/, '') === qBase) return true;
+
+            return false;
+        }
+    }
+
+    // 整体拼音字符串匹配（按空格拆分音节，禁止跨音节）
+    function matchPinyinString(pinyinRaw, query) {
+        if (!pinyinRaw) return false;
+        const p = pinyinRaw.toLowerCase().trim();
+        const q = query.toLowerCase().trim();
+
+        // 如果查询词带空格（用户搜的是多音节词，如 "en de"）
+        if (q.includes(' ')) {
+            const pSyls = p.split(/\s+/);
+            const qSyls = q.split(/\s+/);
+            // 滑动窗口匹配连续的多个音节
+            for (let i = 0; i <= pSyls.length - qSyls.length; i++) {
+                let match = true;
+                for (let j = 0; j < qSyls.length; j++) {
+                    if (!isSyllableMatch(pSyls[i + j], qSyls[j])) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) return true;
+            }
+            return false;
+        } 
+        // 如果查询词无空格（单音节）
+        else {
+            const pSyls = p.split(/\s+/);
+            // 只要词条拼音的任意一个音节匹配上了，就算命中
+            return pSyls.some(syl => isSyllableMatch(syl, q));
+        }
+    }
        /* =========================================================
        全局图像替换：让页面所有地方都支持 IMG:xxx 写法
        ========================================================= */
@@ -302,28 +366,38 @@ injectRareFontFace();
     }
 
     function getPinyinMatchLevel(item, query) {
-        const q = query.toLowerCase();
+        const q = query.toLowerCase().trim();
         const qHasTone = hasToneMark(query);
-        let level = 3;
-
+        
         const check = (pinyinRaw) => {
-            if (!pinyinRaw) return;
-            const p = pinyinRaw.toLowerCase();
-
-            if (qHasTone) {
-                if (pinyinRaw === query || p === q) return 0;
-                if (canonicalTonePinyin(p) === canonicalTonePinyin(q)) return 0;
-                if (pinyinRaw.includes(query) || p.includes(q)) return 1;
-                if (canonicalTonePinyin(p).includes(canonicalTonePinyin(q))) return 1;
+            if (!pinyinRaw) return 3;
+            const p = pinyinRaw.toLowerCase().trim();
+            
+            // 整体完全一致，直接最高优先级
+            if (p === q || canonicalTonePinyin(p) === canonicalTonePinyin(q)) return 0;
+            
+            if (q.includes(' ')) {
+                // 多音节词，如果 matchPinyinString 通过了，就算比较高的匹配
+                return matchPinyinString(p, q) ? 0 : 3;
             } else {
-                const pn = removeTones(p);
-                const qn = removeTones(q);
-                if (pn === qn) return 0;
-                if (pn.includes(qn)) return 1;
+                const pSyls = p.split(/\s+/);
+                // 如果存在某个音节，经过去调和声调转换后，跟查询词完全相等，排第一
+                if (pSyls.some(syl => {
+                    if (syl === q) return true;
+                    if (!qHasTone && removeTones(syl) === removeTones(q)) return true;
+                    return false;
+                })) {
+                    return 0;
+                }
+                // 如果只是模糊匹配上了（比如带不带调的区别），排第二
+                if (pSyls.some(syl => isSyllableMatch(syl, q))) {
+                    return 1;
+                }
             }
             return 3;
         };
 
+        let level = 3;
         for (const py of item.pinyins) {
             level = Math.min(level, check(py.pinyin));
             for (const e of (py.entries || [])) {
@@ -357,31 +431,22 @@ injectRareFontFace();
             if (query === 'IMG:' + item.character.src || query === item.character.src) return true;
         }
 
-        const pinyinMatch = (raw) => {
-            if (!raw) return false;
-            const p = raw.toLowerCase();
+              const pinyinMatch = (raw) => matchPinyinString(raw, query);
 
-            if (q === 'ng') {
-                if (p.includes('ŋ')) return true;
-                if (normalizeNgToEng(p).includes('ng')) return true;
+        for (const py of item.pinyins) {
+            if (pinyinMatch(py.pinyin)) return true;
+
+            for (const e of (py.entries || [])) {
+                if (pinyinMatch(e.entryPinyin)) return true;
+
+                if (e.title) {
+                    const title = e.title.replace(/儿'/g, '儿').replace(/IMG:\w+/g, '[字]');
+                    if (title.includes(query)) return true;
+                    if (removeErhuaFromText(title).includes(removeErhuaFromText(query))) return true;
+                }
             }
-
-            if (raw.includes(query)) return true;
-
-            if (qHasTone) {
-                if (canonicalTonePinyin(p).includes(canonicalTonePinyin(q))) return true;
-                const noR = p.replace(/r\b/g, '').replace(/  +/g, ' ').trim();
-                if (noR.includes(q)) return true;
-                if (canonicalTonePinyin(noR).includes(canonicalTonePinyin(q))) return true;
-            } else {
-                const pn = removeTones(p);
-                const qn = removeTones(q);
-                if (pn.includes(qn)) return true;
-                const noR = pn.replace(/r\b/g, '').replace(/  +/g, ' ').trim();
-                if (noR.includes(qn)) return true;
-            }
-            return false;
-        };
+        }
+        return false;
 
         for (const py of item.pinyins) {
             if (pinyinMatch(py.pinyin)) return true;
