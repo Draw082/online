@@ -120,6 +120,11 @@ header {
     font-size: 2.5rem;
     color: var(--accent-color);
 }
+   .logo-icon img {
+    height: 3rem; /* 控制图片高度，跟原来图标差不多大，可以按需微调 */
+    width: auto;
+    display: block;
+}
 
 .logo-text h1 {
     font-size: 2.2rem;
