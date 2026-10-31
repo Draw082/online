@@ -192,13 +192,74 @@
         return s.replace(/<[^>]*>/g, '');
     }
 
+      /* =========================================================
+       智能高亮：支持拼音模糊高亮、汉字跨标点/儿化高亮、繁简互通
+       ========================================================= */
+    function getPinyinRegexChar(char) {
+        const lower = char.toLowerCase();
+        const map = {
+            'a': '[aāáǎàɑ\\u0300-\\u036F]',
+            'e': '[eēéěèê\\u0300-\\u036F]',
+            'i': '[iīíǐì\\u0300-\\u036F]',
+            'o': '[oōóǒò\\u0300-\\u036F]',
+            'u': '[uūúǔù\\u0300-\\u036F]',
+            'v': '[vüǖǘǚǜ\\u0300-\\u036F]',
+            'ü': '[vüǖǘǚǜ\\u0300-\\u036F]',
+            'ê': '[ê\\u0300-\\u036F]',
+            'n': '[nŋ]'
+        };
+        if (map[lower]) return map[lower];
+        if (char === 'ŋ') return '[nŋ]';
+        return char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // 其他字母直接匹配
+    }
+
+    function buildPinyinRegex(query) {
+        let regexStr = '';
+        for (let char of query) {
+            if (char === ' ') {
+                regexStr += '\\s*'; 
+            } else {
+                regexStr += getPinyinRegexChar(char);
+            }
+        }
+        return new RegExp(`(${regexStr})`, 'gi'); // 拼音不区分大小写
+    }
+
+    function buildChineseRegex(query) {
+        // 去掉用户输入中的标点，提取纯汉字和字母
+        let cleanQuery = query.replace(/[^\p{Script=Han}a-zA-Z]/gu, '');
+        if (!cleanQuery) return null;
+
+        let parts = [];
+        for (let char of cleanQuery) {
+            // 繁简互通
+            let fantiChar = (typeof fanti !== 'undefined' && fanti.toFanti) ? fanti.toFanti(char) : char;
+            let jiantiChar = (typeof fanti !== 'undefined' && fanti.toJianti) ? fanti.toJianti(char) : char;
+            let charClass = (fantiChar !== jiantiChar) ? `[${jiantiChar}${fantiChar}]` : jiantiChar;
+            parts.push(charClass);
+        }
+        
+        // 允许字与字之间出现：标点符号、空格、儿化标记（儿' 或 儿）
+        let joinStr = `(?:[，,。.！!？?；;：:、\\s]|儿')*`;
+        let regexStr = parts.join(joinStr);
+        return new RegExp(`(${regexStr})`, 'g');
+    }
+
+    // 新的高亮函数
     function highlightText(text, query, isTitle) {
         if (!text) return '';
-        const processed = processTextWithImages(text, isTitle);
-        if (!query) return processed;
+        // 先替换图片，避免正则误伤 HTML 标签
+        const processed = replaceImageMarkers(text, isTitle); 
+        if (!query) return processErhua(processed);
 
-        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const re = new RegExp(escaped, 'g');
+        let regex = null;
+        if (isPinyinQuery(query)) {
+            regex = buildPinyinRegex(query);
+        } else {
+            regex = buildChineseRegex(query);
+        }
+
+        if (!regex) return processErhua(processed);
 
         const temp = document.createElement('div');
         temp.innerHTML = processed;
@@ -209,13 +270,17 @@
 
         nodes.forEach((node) => {
             const t = node.nodeValue;
-            if (!t || !t.includes(query)) return;
-            const span = document.createElement('span');
-            span.innerHTML = t.replace(re, (m) => `<span class="highlight">${m}</span>`);
-            node.parentNode.replaceChild(span, node);
+            if (!t) return;
+            const newHtml = t.replace(regex, (match) => `<span class="highlight">${match}</span>`);
+            if (newHtml !== t) {
+                const span = document.createElement('span');
+                span.innerHTML = newHtml;
+                node.parentNode.replaceChild(span, node);
+            }
         });
 
-        return temp.innerHTML;
+        // 高亮完成后，统一处理儿化小字
+        return processErhua(temp.innerHTML);
     }
 
     function containsInvalidChars(str) {
