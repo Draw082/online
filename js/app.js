@@ -379,12 +379,19 @@
         return str.replace(/儿'/g, '').replace(/儿/g, '');
     }
 
+    // 初始化 OpenCC 转换器
+    let t2sConverter = null;
+    if (typeof OpenCC !== 'undefined' && OpenCC.Converter) {
+        t2sConverter = OpenCC.Converter({ from: 'tw', to: 'cn' });
+    }
+
     function toSimplified(str) {
         if (!str) return '';
-        if (typeof fanti === 'undefined' || !fanti.toJianti) {
-            return str;
+        if (t2sConverter) {
+            // 逐字转换，绝对不进行词汇级别的替换
+            return Array.from(str).map(char => t2sConverter(char)).join('');
         }
-        return fanti.toJianti(str);
+        return str;
     }
 
     function getPinyinMatchLevel(item, query) {
