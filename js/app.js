@@ -364,6 +364,14 @@ injectRareFontFace();
     function removeErhuaFromText(str) {
         return str.replace(/儿'/g, '').replace(/儿/g, '');
     }
+       // 使用 fanti 库进行繁简转换
+    function toSimplified(str) {
+        if (!str) return '';
+        if (typeof fanti === 'undefined' || !fanti.toJianti) {
+            return str;
+        }
+        return fanti.toJianti(str);
+    }
 
     function getPinyinMatchLevel(item, query) {
         const q = query.toLowerCase().trim();
@@ -411,27 +419,28 @@ injectRareFontFace();
        匹配：默认模式 / 反查模式
        ========================================================= */
 
-    function matchesSearchDefault(item, query) {
+       function matchesSearchDefault(item, query) {
         if (!query) return false;
         if (!allowsSpecialEntry(item, query)) return false;
 
         const q = query.toLowerCase();
         const qHasTone = hasToneMark(query);
+        const queryS = toSimplified(query); // 把搜索词转成简体
 
         // 单个汉字：只查 [汉字] 字段
         if (isAllChinese(query) && [...query].length === 1) {
             return typeof item.character === 'string' &&
-                   getCharacterText(item).includes(query);
+                   toSimplified(getCharacterText(item)).includes(queryS);
         }
 
-        // 字头
+        // 字头匹配
         if (typeof item.character === 'string') {
-            if (getCharacterText(item).includes(query)) return true;
+            if (toSimplified(getCharacterText(item)).includes(queryS)) return true;
         } else if (item.character.type === 'img') {
             if (query === 'IMG:' + item.character.src || query === item.character.src) return true;
         }
 
-              const pinyinMatch = (raw) => matchPinyinString(raw, query);
+        const pinyinMatch = (raw) => matchPinyinString(raw, query);
 
         for (const py of item.pinyins) {
             if (pinyinMatch(py.pinyin)) return true;
@@ -441,13 +450,22 @@ injectRareFontFace();
 
                 if (e.title) {
                     const title = e.title.replace(/儿'/g, '儿').replace(/IMG:\w+/g, '[字]');
-                    if (title.includes(query)) return true;
-                    if (removeErhuaFromText(title).includes(removeErhuaFromText(query))) return true;
+                    const titleS = toSimplified(title); // 把词条标题转成简体
+                    
+                    if (titleS.includes(queryS)) return true;
+                    
+                    if (removeErhuaFromText(titleS).includes(removeErhuaFromText(queryS))) return true;
+
+                    const cleanTitle = titleS.replace(/[^\p{Script=Han}a-zA-Z]/gu, '').toLowerCase();
+                    const cleanQuery = queryS.replace(/[^\p{Script=Han}a-zA-Z]/gu, '').toLowerCase();
+                    if (cleanQuery && cleanTitle.includes(cleanQuery)) return true;
                 }
             }
         }
-        return false;
 
+        return false;
+    }
+   
         for (const py of item.pinyins) {
             if (pinyinMatch(py.pinyin)) return true;
 
@@ -483,11 +501,12 @@ injectRareFontFace();
         const q = query.toLowerCase();
         const qHasTone = hasToneMark(query);
 
-        const textMatch = (s) => {
+              const textMatch = (s) => {
             if (!s) return false;
-            const t = getPlainText(s);
-            if (t.includes(query)) return true;
-            if (!qHasTone && removeTones(t.toLowerCase()).includes(removeTones(q))) return true;
+            const t = toSimplified(getPlainText(s)); // 释义转简体
+            const qS = toSimplified(query);          // 搜索词转简体
+            if (t.includes(qS)) return true;
+            if (!qHasTone && removeTones(t.toLowerCase()).includes(removeTones(qS.toLowerCase()))) return true;
             return false;
         };
 
