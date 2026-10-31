@@ -58,6 +58,9 @@ body {
 .logo-text h1 {
     font-family: var(--font-lisu);
 }
+   .logo-online {
+    font-size: 0.65em; /* 缩小“在线”二字，0.65em 就是原来的 65% 大小 */
+}
 
 /* 特殊汉字图片 */
 .character-img {
@@ -720,6 +723,11 @@ footer {
         flex-direction: column;
         text-align: center;
         gap: 15px;
+    }
+   
+    /* 手机端调小标题字号 */
+    .logo-text h1 {
+        font-size: 1.6rem; 
     }
 
     .nav-menu {
