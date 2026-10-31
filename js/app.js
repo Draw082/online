@@ -225,17 +225,18 @@
         return new RegExp(`(${regexStr})`, 'gi'); // 拼音不区分大小写
     }
 
-    function buildChineseRegex(query) {
+     function buildChineseRegex(query) {
         // 去掉用户输入中的标点，提取纯汉字和字母
         let cleanQuery = query.replace(/[^\p{Script=Han}a-zA-Z]/gu, '');
         if (!cleanQuery) return null;
 
         let parts = [];
         for (let char of cleanQuery) {
-            // 繁简互通
-            let fantiChar = (typeof fanti !== 'undefined' && fanti.toFanti) ? fanti.toFanti(char) : char;
-            let jiantiChar = (typeof fanti !== 'undefined' && fanti.toJianti) ? fanti.toJianti(char) : char;
-            let charClass = (fantiChar !== jiantiChar) ? `[${jiantiChar}${fantiChar}]` : jiantiChar;
+            // 把用户输入的繁体转为简体
+            let jiantiChar = toSimplified(char); 
+            // 把简体和原本输入的繁体合在一起，比如输入“長”就会变成 [长長]
+            let charsToMatch = Array.from(new Set([jiantiChar, char])).join('');
+            let charClass = charsToMatch.length > 1 ? `[${charsToMatch}]` : charsToMatch;
             parts.push(charClass);
         }
         
