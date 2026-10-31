@@ -120,10 +120,21 @@ header {
     font-size: 2.5rem;
     color: var(--accent-color);
 }
-   .logo-icon img {
-    height: 3rem; /* 控制图片高度，跟原来图标差不多大，可以按需微调 */
+   
+  .logo-icon img {
+    height: 4.2rem; /* 放大尺寸，可以根据实际视觉效果微调 */
     width: auto;
     display: block;
+    /* 加上一层金黄色的光晕，让暗色图案在深绿背景上凸显出来 */
+    filter: drop-shadow(0 0 3px rgba(212, 180, 131, 0.8)) 
+            drop-shadow(0 0 10px rgba(212, 180, 131, 0.4));
+    transition: all 0.3s ease;
+}
+
+/* 鼠标移上去的时候，光晕可以再亮一点（可选） */
+.logo:hover .logo-icon img {
+    filter: drop-shadow(0 0 5px rgba(212, 180, 131, 1)) 
+            drop-shadow(0 0 15px rgba(212, 180, 131, 0.6));
 }
 
 .logo-text h1 {
