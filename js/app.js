@@ -454,10 +454,19 @@ injectRareFontFace();
             for (const e of (py.entries || [])) {
                 if (pinyinMatch(e.entryPinyin)) return true;
 
-                if (e.title) {
+                              if (e.title) {
                     const title = e.title.replace(/儿'/g, '儿').replace(/IMG:\w+/g, '[字]');
+                    
+                    // 1. 常规精确包含匹配
                     if (title.includes(query)) return true;
+                    
+                    // 2. 去儿化匹配
                     if (removeErhuaFromText(title).includes(removeErhuaFromText(query))) return true;
+
+                    // 3. 剔除标点与空格后的匹配（解决用户输入纯字或带空格搜不到带标点词条的问题）
+                    const cleanTitle = title.replace(/[^\p{Script=Han}a-zA-Z]/gu, '').toLowerCase();
+                    const cleanQuery = query.replace(/[^\p{Script=Han}a-zA-Z]/gu, '').toLowerCase();
+                    if (cleanQuery && cleanTitle.includes(cleanQuery)) return true;
                 }
             }
         }
