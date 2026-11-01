@@ -209,38 +209,55 @@
       /* =========================================================
        智能高亮：支持拼音模糊高亮、汉字跨标点/儿化高亮、繁简互通
        ========================================================= */
-    function getPinyinRegexChar(char) {
-        const lower = char.toLowerCase();
-        const map = {
-            'a': '[aāáǎàɑ\\u0300-\\u036F]',
-            'e': '[eēéěèê\\u0300-\\u036F]',
-            'i': '[iīíǐì\\u0300-\\u036F]',
-            'o': '[oōóǒò\\u0300-\\u036F]',
-            'u': '[uūúǔù\\u0300-\\u036F]',
-            'v': '[vüǖǘǚǜ\\u0300-\\u036F]',
-            'ü': '[vüǖǘǚǜ\\u0300-\\u036F]',
-            'ê': '[ê\\u0300-\\u036F]',
-            'n': '[nŋ]',
-            'g': '[gɡ]',
-            'ɡ': '[gɡ]'
-        };
-        if (map[lower]) return map[lower];
-        if (char === 'ŋ') return '[nŋ]';
-        return char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // 其他字母直接匹配
-    }
 
-    function buildPinyinRegex(query) {
-        let regexStr = '';
-        for (let char of query) {
-            if (char === ' ') {
-                regexStr += '\\s*'; 
+       function buildPinyinRegex(query) {
+        // 1. 将查询词里的特殊写法全部抹平为基础字母
+        // 例如：ɑ 变 a，ɡ 变 g，ŋ 变 ng，去掉声调组合符
+        let rawChars = query.normalize('NFD')
+                            .replace(/[\u0300-\u036F]/g, '') // 剥离所有声调符
+                            .replace(/ɑ/g, 'a')
+                            .replace(/ɡ/g, 'g')
+                            .replace(/ŋ/g, 'ng')             // 把 ŋ 变成 ng 走后面的合并逻辑
+                            .split('');
+        
+        // 2. 定义元音匹配规则
+        // 关键：后面的 (?:[\u0300-\u036F]*) 会强行把声调符号拉进高亮范围
+        const map = {
+            'a': '[aɑ](?:[\\u0300-\\u036F]*)',
+            'e': '[e](?:[\\u0300-\\u036F]*)',
+            'i': '[i](?:[\\u0300-\\u036F]*)',
+            'o': '[o](?:[\\u0300-\\u036F]*)',
+            'u': '[u](?:[\\u0300-\\u036F]*)',
+            'v': '[vü](?:[\\u0300-\\u036F]*)',
+            'ü': '[vü](?:[\\u0300-\\u036F]*)'
+        };
+        
+        let regexParts = [];
+        for (let i = 0; i < rawChars.length; i++) {
+            let char = rawChars[i];
+            
+            if (char === 'n' && rawChars[i+1] === 'g') {
+                // 处理 ng 匹配 ŋ 的情况
+                regexParts.push('(?:n(?:[\\u0300-\\u036F]*)[gɡ]|ŋ)');
+                i++; // 跳过 g
+            } else if (map[char]) {
+                // 元音字母，带上声调一起高亮
+                regexParts.push(map[char]);
+            } else if (char === 'g') {
+                // 手写体 g 和 印刷体 g 互通
+                regexParts.push('[gɡ]');
+            } else if (char === ' ') {
+                // 允许匹配空格
+                regexParts.push('\\s*');
             } else {
-                regexStr += getPinyinRegexChar(char);
+                // 其他辅音等直接匹配
+                regexParts.push(char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
             }
         }
-        return new RegExp(`(${regexStr})`, 'gi'); // 拼音不区分大小写
+        
+        return new RegExp(`(${regexParts.join('')})`, 'gi');
     }
-
+   
      function buildChineseRegex(query) {
         // 去掉用户输入中的标点，提取纯汉字和字母
         let cleanQuery = query.replace(/[^\p{Script=Han}a-zA-Z]/gu, '');
