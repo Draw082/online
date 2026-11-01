@@ -250,13 +250,18 @@
         return new RegExp(`(${regexParts.join('')})`, 'gi');
     }
    
-     function buildChineseRegex(query) {
+       function buildChineseRegex(query) {
         // 去掉用户输入中的标点，提取纯汉字和字母
         let cleanQuery = query.replace(/[^\p{Script=Han}a-zA-Z]/gu, '');
         if (!cleanQuery) return null;
 
+        // 核心修复：如果用户输入了“儿”，把它剥离出来，交给后面的连字符去匹配，防止打断高亮和儿化的结构
+        let queryWithoutErhua = cleanQuery.replace(/儿/g, '');
+        // 如果剥离后为空（说明用户只搜了“儿”），那就保留原样
+        let targetQuery = queryWithoutErhua.length > 0 ? queryWithoutErhua : cleanQuery;
+
         let parts = [];
-        for (let char of cleanQuery) {
+        for (let char of targetQuery) {
             // 把用户输入的繁体转为简体
             let jiantiChar = toSimplified(char); 
             // 把简体和原本输入的繁体合在一起，比如输入“長”就会变成 [长長]
@@ -265,8 +270,8 @@
             parts.push(charClass);
         }
         
-        // 允许字与字之间出现：标点符号、空格、儿化标记（儿' 或 儿）
-        let joinStr = `(?:[，,。.！!？?；;：:、\\s]|儿')*`;
+        // 允许字与字之间出现：标点符号、空格、儿' 或 儿（兼容没有单引号的儿化）
+        let joinStr = `(?:[，,。.！!？?；;：:、\\s]|儿'?)*`;
         let regexStr = parts.join(joinStr);
         return new RegExp(`(${regexStr})`, 'g');
     }
