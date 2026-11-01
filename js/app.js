@@ -67,15 +67,14 @@
     /* =========================================================
        工具函数
        ========================================================= */
-    function isSyllableMatch(pSyl, query) {
+      function isSyllableMatch(pSyl, query) {
         let p = pSyl.toLowerCase();
         let q = query.toLowerCase();
 
-        // 只要用户没打声调，就视同没打，走模糊匹配
         const isStrict = /[āáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜ\u0300-\u036F]/.test(q);
 
         if (isStrict) {
-            // 带有声调，必须精确匹配
+            // 带调匹配：直接比对，区分 u 和 ü
             if (p === q || canonicalTonePinyin(p) === canonicalTonePinyin(q)) {
                 if (q.includes('ê') && !p.includes('ê') && !p.includes('e\u0302')) return false;
                 return true;
@@ -85,9 +84,12 @@
             }
             return false;
         } else {
-            // 没带声调：把 a 和 ɑ 统一，g 和 ɡ 统一，再去掉所有声调对比
+            // 无调匹配：把 ü 统一转成 v，然后再剥去声调，这样 u 和 ü 就不会混了
             const strip = (str) => {
-                return str.normalize('NFD').replace(/[\u0300-\u036F]/g, '')
+                return str.toLowerCase()
+                          .replace(/ü/g, 'v') // 关键：先把 ü 转成 v
+                          .normalize('NFD')
+                          .replace(/[\u0300-\u036F]/g, '')
                           .replace(/ɑ/g, 'a')
                           .replace(/ɡ/g, 'g')
                           .replace(/ŋ/g, 'ng')
@@ -97,7 +99,7 @@
             let qBase = strip(q);
 
             if (pBase === qBase) return true;
-            if (pBase.replace(/r$/, '') === qBase) return true; // 儿化容错
+            if (pBase.replace(/r$/, '') === qBase) return true;
             return false;
         }
     }
@@ -209,36 +211,33 @@
       /* =========================================================
        智能高亮：支持拼音模糊高亮、汉字跨标点/儿化高亮、繁简互通
        ========================================================= */
-    function buildPinyinRegex(query) {
-        let rawChars = query.normalize('NFD')
-                            .replace(/[\u0300-\u036F]/g, '')
-                            .replace(/ɑ/g, 'a')
-                            .replace(/ɡ/g, 'g')
-                            .replace(/ŋ/g, 'ng')
-                            .split('');
-        
-        // 【核心修改】把所有预组合的带调字母（āáǎàēéěè等）全部强行包含进去
-        const map = {
-            'a': '[aɑāáǎà](?:[\\u0300-\\u036F]*)',
-            'e': '[eēéěèê](?:[\\u0300-\\u036F]*)',
-            'i': '[iīíǐì](?:[\\u0300-\\u036F]*)',
-            'o': '[oōóǒò](?:[\\u0300-\\u036F]*)',
-            'u': '[uūúǔù](?:[\\u0300-\\u036F]*)',
-            'v': '[vüǖǘǚǜ](?:[\\u0300-\\u036F]*)',
-            'ü': '[vüǖǘǚǜ](?:[\\u0300-\\u036F]*)'
-        };
-        
+      function buildPinyinRegex(query) {
+        // 使用 NFC 格式化，确保带调字符（如 ā）不被拆开
+        let normQuery = query.normalize('NFC').toLowerCase();
         let regexParts = [];
-        for (let i = 0; i < rawChars.length; i++) {
-            let char = rawChars[i];
+        
+        for (let i = 0; i < normQuery.length; i++) {
+            let char = normQuery[i];
             
-            if (char === 'n' && rawChars[i+1] === 'g') {
-                // 处理 ng 匹配 ŋ 的情况，并且允许带声调
+            if (char === 'n' && normQuery[i+1] === 'g') {
+                // ng 匹配 ŋ，且允许带声调
                 regexParts.push('(?:n(?:[\\u0300-\\u036F]*)[gɡ]|ŋ(?:[\\u0300-\\u036F]*))');
-                i++; // 跳过 g
-            } else if (map[char]) {
-                regexParts.push(map[char]);
-            } else if (char === 'g') {
+                i++;
+            } else if (char === 'v' || char === 'ü') {
+                // v 和 ü 互通，但不匹配 u
+                regexParts.push('[vüǖǘǚǜ](?:[\\u0300-\\u036F]*)');
+            } else if (char === 'u') {
+                // u 只能匹配 u，不能匹配 ü
+                regexParts.push('[uūúǔù](?:[\\u0300-\\u036F]*)');
+            } else if (char === 'a' || char === 'ɑ') {
+                regexParts.push('[aɑāáǎà](?:[\\u0300-\\u036F]*)');
+            } else if (char === 'e' || char === 'ê') {
+                regexParts.push('[eēéěèê](?:[\\u0300-\\u036F]*)');
+            } else if (char === 'i') {
+                regexParts.push('[iīíǐì](?:[\\u0300-\\u036F]*)');
+            } else if (char === 'o') {
+                regexParts.push('[oōóǒò](?:[\\u0300-\\u036F]*)');
+            } else if (char === 'g' || char === 'ɡ') {
                 regexParts.push('[gɡ](?:[\\u0300-\\u036F]*)');
             } else if (char === ' ') {
                 regexParts.push('\\s*');
@@ -246,7 +245,6 @@
                 regexParts.push(char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
             }
         }
-        
         return new RegExp(`(${regexParts.join('')})`, 'gi');
     }
    
@@ -419,7 +417,7 @@
         return str;
     }
 
-        function getPinyinMatchLevel(item, query) {
+           function getPinyinMatchLevel(item, query) {
         const q = query.toLowerCase().trim();
         const qHasTone = hasToneMark(query);
         
@@ -427,19 +425,16 @@
             if (!pinyinRaw) return 3;
             const p = pinyinRaw.toLowerCase().trim();
             
-            // 【最核心】如果用户输入的和字典原文一模一样，或者带调视同，无脑排第一！
             if (p === q || canonicalTonePinyin(p) === canonicalTonePinyin(q)) return 0;
             
             if (q.includes(' ')) {
                 return matchPinyinString(p, q) ? 0 : 3;
             } else {
-                // 把字典的音节拆开，抹平 a/ɑ、g/ɡ 的区别
-                const pSyls = p.split(/\s+/).map(syl => 
-                    syl.replace(/ɑ/g, 'a').replace(/ɡ/g, 'g').replace(/ŋ/g, 'ng')
-                );
-                const qNorm = q.replace(/ɑ/g, 'a').replace(/ɡ/g, 'g').replace(/ŋ/g, 'ng');
+                // 归一化：先把 ü 转 v，抹平 a/ɑ、g/ɡ，再去掉声调
+                const normalize = (s) => s.replace(/ü/g, 'v').replace(/ɑ/g, 'a').replace(/ɡ/g, 'g').replace(/ŋ/g, 'ng');
+                const pSyls = p.split(/\s+/).map(syl => normalize(syl));
+                const qNorm = normalize(q);
                 
-                // 如果抹平后，存在某个音节和用户输入完全一样，排第一
                 if (pSyls.some(syl => {
                     if (syl === qNorm) return true;
                     if (!qHasTone && removeTones(syl) === removeTones(qNorm)) return true;
@@ -447,7 +442,6 @@
                 })) {
                     return 0;
                 }
-                // 如果只是模糊匹配上了（比如带不带调的区别），排第二
                 if (pSyls.some(syl => isSyllableMatch(syl, q))) {
                     return 1;
                 }
