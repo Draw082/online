@@ -1,5 +1,5 @@
 /* =========================================================
-   中山韵典在线 · 交互逻辑（完整修复版）
+   中山韵典在线 · 交互逻辑（完整最终版）
    依赖：js/database.js
    ========================================================= */
 
@@ -12,14 +12,11 @@
     function injectRareFontFace() {
         const chars = window.RARE_CHARS || [];
         if (!chars.length) return;
-
         const ranges = chars
             .filter((ch) => typeof ch === 'string' && ch)
             .map((ch) => 'U+' + ch.codePointAt(0).toString(16).toUpperCase())
             .join(', ');
-
         if (!ranges) return;
-
         const style = document.createElement('style');
         style.textContent = `
             @font-face {
@@ -65,16 +62,144 @@
     let currentSearchMode  = 'default';
 
     /* =========================================================
-       工具函数
+       基础工具函数
        ========================================================= */
-       function isSyllableMatch(pSyl, query) {
+    function removeTones(pinyin) {
+        if (!pinyin) return '';
+        return pinyin
+            .replace(/[āáǎàɑ]/g, 'a')
+            .replace(/[ēéěèê]/g, 'e')
+            .replace(/[īíǐì]/g, 'i')
+            .replace(/[ōóǒò]/g, 'o')
+            .replace(/[ūúǔù]/g, 'u')
+            .replace(/[ǖǘǚǜü]/g, 'v')
+            .replace(/[g]/g, 'ɡ')
+            .replace(/[\u0300-\u036F]/g, '');
+    }
+
+    function canonicalTonePinyin(str) {
+        if (!str) return '';
+        let s = str.toLowerCase().normalize('NFD');
+        s = s.replace(/u\u0308/g, 'v').replace(/\u0251/g, 'a').replace(/\u014b/g, 'ng');
+        return s.replace(/[\u0300-\u036F]+/g, (m) => {
+            if (m.includes('\u0304')) return '1';
+            if (m.includes('\u0301')) return '2';
+            if (m.includes('\u030C')) return '3';
+            if (m.includes('\u0300')) return '4';
+            if (m.includes('\u0309')) return '5';
+            return '';
+        });
+    }
+
+    function hasToneMark(str) {
+        return /[āáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜ\u0300-\u036F]/.test(str || '');
+    }
+
+    function getPlainText(text) {
+        if (!text) return '';
+        let s = text.replace(/儿'/g, '儿').replace(/IMG:\w+/g, '[字]');
+        return s.replace(/<[^>]*>/g, '');
+    }
+
+    function containsInvalidChars(str) {
+        if (!str) return false;
+        const valid = /^[\p{Script=Han}a-zA-Z\sɑāáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜüŋɡ\u0300-\u036F]*$/u;
+        return !valid.test(str);
+    }
+
+    function isAllChinese(str) {
+        return /^[\p{Script=Han}]+$/u.test(str);
+    }
+
+    function isSingleLetter(str) {
+        return /^[a-zA-Z]$/.test(str);
+    }
+
+    function isPinyinQuery(query) {
+        if (/[\p{Script=Han}]/u.test(query)) return false;
+        if (query.includes(' ')) return true;
+        return /[a-zA-Zɑāáǎàēéěèêōóǒòīíǐìūúǔùǖǘǚǜüŋɡ\u0300-\u036F]/.test(query);
+    }
+
+    function isVocabQuery(query) {
+        const han = query.match(/[\p{Script=Han}]/gu);
+        if (han && han.length >= 2) return true;
+        return query.includes(' ');
+    }
+
+    function getCharacterText(item) {
+        if (typeof item.character === 'string') {
+            return item.character.replace(/儿'/g, '儿').replace(/IMG:\w+/g, '[字]');
+        }
+        return '';
+    }
+
+    function isSpecialEntry(item) {
+        const t = getCharacterText(item);
+        return t === '凡例' || t === '特殊标注含义说明';
+    }
+
+    function allowsSpecialEntry(item, query) {
+        const t = getCharacterText(item);
+        if (t === '凡例') return query === '凡例';
+        if (t === '特殊标注含义说明') return query === '特殊标注含义说明' || query === '特殊标注';
+        return true;
+    }
+
+    function countChineseMatches(item, query) {
+        let count = 0;
+        const scan = (s) => {
+            if (!s) return;
+            const t = getPlainText(s);
+            let i = 0;
+            while ((i = t.indexOf(query, i)) !== -1) { count++; i += query.length; }
+        };
+        scan(getCharacterText(item));
+        for (const py of item.pinyins) {
+            (py.meanings || []).forEach((m) => {
+                scan(m.text);
+                (m.examples || []).forEach((ex) => { scan(ex.dialect); scan(ex.translation); });
+            });
+            (py.entries || []).forEach((e) => {
+                scan(e.title); scan(e.definition);
+                (e.examples || []).forEach((ex) => { scan(ex.dialect); scan(ex.translation); });
+            });
+        }
+        return count;
+    }
+
+    function hasPinyinExactlyLetter(item, letter) {
+        const l = letter.toLowerCase();
+        return item.pinyins.some((py) => removeTones(py.pinyin.trim().toLowerCase()) === l);
+    }
+
+    function removeErhuaFromText(str) {
+        return str.replace(/儿'/g, '').replace(/儿/g, '');
+    }
+
+    // OpenCC 繁简转换（逐字转换，禁用词汇级替换）
+    let t2sConverter = null;
+    if (typeof OpenCC !== 'undefined' && OpenCC.Converter) {
+        t2sConverter = OpenCC.Converter({ from: 'tw', to: 'cn' });
+    }
+    function toSimplified(str) {
+        if (!str) return '';
+        if (t2sConverter) {
+            return Array.from(str).map(char => t2sConverter(char)).join('');
+        }
+        return str;
+    }
+
+    /* =========================================================
+       拼音严格匹配逻辑
+       ========================================================= */
+    function isSyllableMatch(pSyl, query) {
         let p = pSyl.toLowerCase();
         let q = query.toLowerCase();
 
         const isStrict = /[āáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜ\u0300-\u036F]/.test(q);
 
         if (isStrict) {
-            // 带调匹配，严格相等
             if (p === q || canonicalTonePinyin(p) === canonicalTonePinyin(q)) {
                 if (q.includes('ê') && !p.includes('ê') && !p.includes('e\u0302')) return false;
                 return true;
@@ -84,23 +209,23 @@
             }
             return false;
         } else {
-            // 核心修复：无调匹配时，用 NFD 把 ü 拆开，精准转换为 v，让 u 和 ü 彻底分离
-            const normalizeForMatch = (str) => {
-                let s = str.normalize('NFD');
-                s = s.replace(/u\u0308/g, 'v'); // 把 u + 两点 替换为 v
-                s = s.replace(/[\u0300-\u036F]/g, ''); // 剥去声调
-                return s.replace(/ɑ/g, 'a').replace(/ɡ/g, 'g').replace(/ŋ/g, 'ng').replace(/ê/g, 'e');
+            const strip = (str) => {
+                return str.replace(/ü/g, 'v')
+                          .normalize('NFD')
+                          .replace(/[\u0300-\u036F]/g, '')
+                          .replace(/ɑ/g, 'a')
+                          .replace(/ɡ/g, 'g')
+                          .replace(/ŋ/g, 'ng')
+                          .replace(/ê/g, 'e');
             };
-            
-            let pBase = normalizeForMatch(p);
-            let qBase = normalizeForMatch(q);
-
+            let pBase = strip(p);
+            let qBase = strip(q);
             if (pBase === qBase) return true;
-            if (pBase.replace(/r$/, '') === qBase) return true; // 儿化容错
+            if (pBase.replace(/r$/, '') === qBase) return true;
             return false;
         }
     }
-   
+
     function matchPinyinString(pinyinRaw, query) {
         if (!pinyinRaw) return false;
         const p = pinyinRaw.toLowerCase().trim();
@@ -126,20 +251,60 @@
         }
     }
 
+    function getPinyinMatchLevel(item, query) {
+        const q = query.toLowerCase().trim();
+        const qHasTone = hasToneMark(query);
+        
+        const check = (pinyinRaw) => {
+            if (!pinyinRaw) return 3;
+            const p = pinyinRaw.toLowerCase().trim();
+            
+            if (p === q || canonicalTonePinyin(p) === canonicalTonePinyin(q)) return 0;
+            
+            if (q.includes(' ')) {
+                return matchPinyinString(p, q) ? 0 : 3;
+            } else {
+                const strip = (str) => str.replace(/ü/g, 'v').normalize('NFD').replace(/[\u0300-\u036F]/g, '').replace(/ɑ/g, 'a').replace(/ɡ/g, 'g').replace(/ŋ/g, 'ng').replace(/ê/g, 'e');
+                const pSyls = p.split(/\s+/).map(syl => strip(syl));
+                const qNorm = strip(q);
+                
+                if (pSyls.some(syl => {
+                    if (syl === qNorm) return true;
+                    if (!qHasTone && removeTones(syl) === removeTones(qNorm)) return true;
+                    return false;
+                })) {
+                    return 0;
+                }
+                if (pSyls.some(syl => isSyllableMatch(syl, q))) {
+                    return 1;
+                }
+            }
+            return 3;
+        };
+
+        let level = 3;
+        for (const py of item.pinyins) {
+            level = Math.min(level, check(py.pinyin));
+            for (const e of (py.entries || [])) {
+                level = Math.min(level, check(e.entryPinyin));
+            }
+        }
+        return level === 3 ? 2 : level;
+    }
+
+    /* =========================================================
+       图像和儿化处理
+       ========================================================= */
     function applyGlobalImages() {
         const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
             acceptNode: function (node) {
-                if (node.parentElement.tagName.match(/^(SCRIPT|STYLE|TEXTAREA|TITLE)$/i)) {
-                    return NodeFilter.FILTER_REJECT;
-                }
+                if (node.parentElement.tagName.match(/^(SCRIPT|STYLE|TEXTAREA|TITLE)$/i)) return NodeFilter.FILTER_REJECT;
                 return NodeFilter.FILTER_ACCEPT;
             }
         });
         const nodes = [];
         while (walker.nextNode()) {
-            if (walker.currentNode.nodeValue.includes('IMG:')) {
-                nodes.push(walker.currentNode);
-            }
+            if (walker.currentNode.nodeValue.includes('IMG:')) nodes.push(walker.currentNode);
         }
         nodes.forEach(node => {
             const text = node.nodeValue;
@@ -157,59 +322,13 @@
     function replaceImageMarkers(text, isTitle) {
         if (!text) return text;
         const cls = isTitle ? 'character-img' : 'inline-img-char';
-        return text.replace(/IMG:(\w+)/g,
-            (m, name) => `<img src="images/${name}.png" alt="图片" class="${cls}">`);
+        return text.replace(/IMG:(\w+)/g, (m, name) => `<img src="images/${name}.png" alt="图片" class="${cls}">`);
     }
 
-    function processTextWithImages(text, isTitle) {
-        if (!text) return text;
-        return processErhua(replaceImageMarkers(text, isTitle));
-    }
-
-    function removeTones(pinyin) {
-        if (!pinyin) return '';
-        return pinyin
-            .replace(/[āáǎàɑ]/g, 'a')
-            .replace(/[ēéěèê]/g, 'e')
-            .replace(/[īíǐì]/g, 'i')
-            .replace(/[ōóǒò]/g, 'o')
-            .replace(/[ūúǔù]/g, 'u')
-            .replace(/[ǖǘǚǜü]/g, 'v')
-            .replace(/[g]/g, 'ɡ')
-            .replace(/[\u0300-\u036F]/g, '');
-    }
-
-    function canonicalTonePinyin(str) {
-        if (!str) return '';
-        let s = str.toLowerCase().normalize('NFD');
-        s = s.replace(/u\u0308/g, 'v')
-             .replace(/\u0251/g, 'a')
-             .replace(/\u014b/g, 'ng');
-        return s.replace(/[\u0300-\u036F]+/g, (m) => {
-            if (m.includes('\u0304')) return '1';
-            if (m.includes('\u0301')) return '2';
-            if (m.includes('\u030C')) return '3';
-            if (m.includes('\u0300')) return '4';
-            if (m.includes('\u0309')) return '5';
-            return '';
-        });
-    }
-
-    function hasToneMark(str) {
-        return /[āáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜ\u0300-\u036F]/.test(str || '');
-    }
-
-    function getPlainText(text) {
-        if (!text) return '';
-        let s = text.replace(/儿'/g, '儿').replace(/IMG:\w+/g, '[字]');
-        return s.replace(/<[^>]*>/g, '');
-    }
-
-      /* =========================================================
-       智能高亮：支持拼音模糊高亮、汉字跨标点/儿化高亮、繁简互通
+    /* =========================================================
+       智能高亮
        ========================================================= */
-      function buildPinyinRegex(query) {
-        // 使用 NFC 格式化，确保带调字符（如 ā）不被拆开
+    function buildPinyinRegex(query) {
         let normQuery = query.normalize('NFC').toLowerCase();
         let regexParts = [];
         
@@ -217,14 +336,11 @@
             let char = normQuery[i];
             
             if (char === 'n' && normQuery[i+1] === 'g') {
-                // ng 匹配 ŋ，且允许带声调
                 regexParts.push('(?:n(?:[\\u0300-\\u036F]*)[gɡ]|ŋ(?:[\\u0300-\\u036F]*))');
                 i++;
             } else if (char === 'v' || char === 'ü') {
-                // v 和 ü 互通，但不匹配 u
                 regexParts.push('[vüǖǘǚǜ](?:[\\u0300-\\u036F]*)');
             } else if (char === 'u') {
-                // u 只能匹配 u，不能匹配 ü
                 regexParts.push('[uūúǔù](?:[\\u0300-\\u036F]*)');
             } else if (char === 'a' || char === 'ɑ') {
                 regexParts.push('[aɑāáǎà](?:[\\u0300-\\u036F]*)');
@@ -244,9 +360,8 @@
         }
         return new RegExp(`(${regexParts.join('')})`, 'gi');
     }
-   
-         function buildChineseRegex(query) {
-        // 提取纯汉字和字母（绝对不删掉“儿”）
+
+    function buildChineseRegex(query) {
         let cleanQuery = query.replace(/[^\p{Script=Han}a-zA-Z]/gu, '');
         if (!cleanQuery) return null;
 
@@ -257,18 +372,13 @@
             let charClass = charsToMatch.length > 1 ? `[${charsToMatch}]` : charsToMatch;
             parts.push(charClass);
         }
-        
-        // 允许中间、开头、结尾出现标点、空格或单引号
         let joinStr = `[，,。.！!？?；;：:、\\s']*`;
-        // 关键：首尾也都加上 joinStr，把“巴儿'巴儿'”最后的单引号也吃进高亮框里
         let regexStr = joinStr + parts.join(joinStr) + joinStr;
         return new RegExp(`(${regexStr})`, 'g');
     }
 
-    // 新的高亮函数
     function highlightText(text, query, isTitle) {
         if (!text) return '';
-        // 先替换图片，避免正则误伤 HTML 标签
         const processed = replaceImageMarkers(text, isTitle); 
         if (!query) return processErhua(processed);
 
@@ -283,7 +393,6 @@
 
         const temp = document.createElement('div');
         temp.innerHTML = processed;
-
         const walker = document.createTreeWalker(temp, NodeFilter.SHOW_TEXT);
         const nodes = [];
         while (walker.nextNode()) nodes.push(walker.currentNode);
@@ -298,158 +407,9 @@
                 node.parentNode.replaceChild(span, node);
             }
         });
-
-        // 高亮完成后，统一处理儿化小字
         return processErhua(temp.innerHTML);
     }
 
-    function containsInvalidChars(str) {
-        if (!str) return false;
-      const valid = /^[\p{Script=Han}a-zA-Z\sɑāáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜüŋɡ\u0300-\u036F]*$/u;
-        return !valid.test(str);
-    }
-
-    function showInputAlert(message) {
-        inputAlertMessage.textContent = message;
-        inputAlertModal.classList.add('show');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function hideInputAlert() {
-        inputAlertModal.classList.remove('show');
-        document.body.style.overflow = 'auto';
-    }
-
-    function isAllChinese(str) {
-        return /^[\p{Script=Han}]+$/u.test(str);
-    }
-
-    function isSingleLetter(str) {
-        return /^[a-zA-Z]$/.test(str);
-    }
-
-    function isPinyinQuery(query) {
-        if (/[\p{Script=Han}]/u.test(query)) return false;
-        if (query.includes(' ')) return true;
-     return /[a-zA-Zɑāáǎàēéěèêōóǒòīíǐìūúǔùǖǘǚǜüŋɡ\u0300-\u036F]/.test(query);
-    }
-
-    function isVocabQuery(query) {
-        const han = query.match(/[\p{Script=Han}]/gu);
-        if (han && han.length >= 2) return true;
-        return query.includes(' ');
-    }
-
-    function getCharacterText(item) {
-        if (typeof item.character === 'string') {
-            return item.character.replace(/儿'/g, '儿').replace(/IMG:\w+/g, '[字]');
-        }
-        return '';
-    }
-
-    function isSpecialEntry(item) {
-        const t = getCharacterText(item);
-        return t === '凡例' || t === '特殊标注含义说明';
-    }
-
-    function allowsSpecialEntry(item, query) {
-        const t = getCharacterText(item);
-        if (t === '凡例') return query === '凡例';
-        if (t === '特殊标注含义说明') {
-            return query === '特殊标注含义说明' || query === '特殊标注';
-        }
-        return true;
-    }
-
-    function countChineseMatches(item, query) {
-        let count = 0;
-        const scan = (s) => {
-            if (!s) return;
-            const t = getPlainText(s);
-            let i = 0;
-            while ((i = t.indexOf(query, i)) !== -1) { count++; i += query.length; }
-        };
-        scan(getCharacterText(item));
-        for (const py of item.pinyins) {
-            (py.meanings || []).forEach((m) => {
-                scan(m.text);
-                (m.examples || []).forEach((ex) => {
-                    scan(ex.dialect);
-                    scan(ex.translation);
-                });
-            });
-            (py.entries || []).forEach((e) => {
-                scan(e.title);
-                scan(e.definition);
-                (e.examples || []).forEach((ex) => {
-                    scan(ex.dialect);
-                    scan(ex.translation);
-                });
-            });
-        }
-        return count;
-    }
-
-    function hasPinyinExactlyLetter(item, letter) {
-        const l = letter.toLowerCase();
-        return item.pinyins.some((py) => removeTones(py.pinyin.trim().toLowerCase()) === l);
-    }
-
-    function removeErhuaFromText(str) {
-        return str.replace(/儿'/g, '').replace(/儿/g, '');
-    }
-
-    // 初始化 OpenCC 转换器
-    let t2sConverter = null;
-    if (typeof OpenCC !== 'undefined' && OpenCC.Converter) {
-        t2sConverter = OpenCC.Converter({ from: 'tw', to: 'cn' });
-    }
-
-    function toSimplified(str) {
-        if (!str) return '';
-        if (t2sConverter) {
-            // 逐字转换，绝对不进行词汇级别的替换
-            return Array.from(str).map(char => t2sConverter(char)).join('');
-        }
-        return str;
-    }
-
-    function buildPinyinRegex(query) {
-        // 这里用 NFC 防止把带调字符拆烂，正则才能完美高亮预组合字符
-        let normQuery = query.normalize('NFC').toLowerCase();
-        let regexParts = [];
-        
-        for (let i = 0; i < normQuery.length; i++) {
-            let char = normQuery[i];
-            
-            if (char === 'n' && normQuery[i+1] === 'g') {
-                regexParts.push('(?:n(?:[\\u0300-\\u036F]*)[gɡ]|ŋ(?:[\\u0300-\\u036F]*))');
-                i++;
-            } else if (char === 'v' || char === 'ü') {
-                // 输入 v 或 ü 只匹配 ü 及其带调形式，绝不匹配 u
-                regexParts.push('[vüǖǘǚǜ](?:[\\u0300-\\u036F]*)');
-            } else if (char === 'u') {
-                // 输入 u 只匹配 u 及其带调形式，绝不匹配 ü
-                regexParts.push('[uūúǔù](?:[\\u0300-\\u036F]*)');
-            } else if (char === 'a' || char === 'ɑ') {
-                regexParts.push('[aɑāáǎà](?:[\\u0300-\\u036F]*)');
-            } else if (char === 'e' || char === 'ê') {
-                regexParts.push('[eēéěèê](?:[\\u0300-\\u036F]*)');
-            } else if (char === 'i') {
-                regexParts.push('[iīíǐì](?:[\\u0300-\\u036F]*)');
-            } else if (char === 'o') {
-                regexParts.push('[oōóǒò](?:[\\u0300-\\u036F]*)');
-            } else if (char === 'g' || char === 'ɡ') {
-                regexParts.push('[gɡ](?:[\\u0300-\\u036F]*)');
-            } else if (char === ' ') {
-                regexParts.push('\\s*');
-            } else {
-                regexParts.push(char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-            }
-        }
-        return new RegExp(`(${regexParts.join('')})`, 'gi');
-    }
-   
     /* =========================================================
        匹配逻辑
        ========================================================= */
@@ -457,13 +417,10 @@
         if (!query) return false;
         if (!allowsSpecialEntry(item, query)) return false;
 
-        const q = query.toLowerCase();
-        const qHasTone = hasToneMark(query);
         const queryS = toSimplified(query);
 
         if (isAllChinese(query) && [...query].length === 1) {
-            return typeof item.character === 'string' &&
-                   toSimplified(getCharacterText(item)).includes(queryS);
+            return typeof item.character === 'string' && toSimplified(getCharacterText(item)).includes(queryS);
         }
 
         if (typeof item.character === 'string') {
@@ -481,15 +438,11 @@
                 if (pinyinMatch(e.entryPinyin)) return true;
 
                 if (e.title) {
-                    // 把数据库的“儿'”统一换成“儿”，方便用户不打单引号也能搜到
                     const title = e.title.replace(/儿'/g, '儿').replace(/IMG:\w+/g, '[字]');
                     const titleS = toSimplified(title);
-                    const queryS = toSimplified(query);
                     
-                    // 1. 精确包含匹配（搜“儿子”就只匹配“儿子”）
                     if (titleS.includes(queryS)) return true;
                     
-                    // 2. 剔除标点后的匹配
                     const cleanTitle = titleS.replace(/[^\p{Script=Han}a-zA-Z]/gu, '').toLowerCase();
                     const cleanQuery = queryS.replace(/[^\p{Script=Han}a-zA-Z]/gu, '').toLowerCase();
                     if (cleanQuery && cleanTitle.includes(cleanQuery)) return true;
@@ -504,9 +457,7 @@
         if (!allowsSpecialEntry(item, query)) return false;
         if (matchesSearchDefault(item, query)) return true;
 
-        const q = query.toLowerCase();
         const qHasTone = hasToneMark(query);
-
         const textMatch = (s) => {
             if (!s) return false;
             const t = toSimplified(getPlainText(s));
@@ -520,15 +471,13 @@
             for (const m of (py.meanings || [])) {
                 if (textMatch(m.text)) return true;
                 for (const ex of (m.examples || [])) {
-                    if (textMatch(ex.dialect)) return true;
-                    if (textMatch(ex.translation)) return true;
+                    if (textMatch(ex.dialect) || textMatch(ex.translation)) return true;
                 }
             }
             for (const e of (py.entries || [])) {
                 if (textMatch(e.definition)) return true;
                 for (const ex of (e.examples || [])) {
-                    if (textMatch(ex.dialect)) return true;
-                    if (textMatch(ex.translation)) return true;
+                    if (textMatch(ex.dialect) || textMatch(ex.translation)) return true;
                 }
             }
             if (textMatch(py.notes)) return true;
@@ -537,7 +486,7 @@
     }
 
     /* =========================================================
-       渲染
+       渲染与页面切换
        ========================================================= */
     function showInitialMessage() {
         resultsContainer.innerHTML = `
@@ -547,9 +496,8 @@
                 <p>请输入定州方言字词或拼音进行查询，结果将显示在这里</p>
                 <p style="margin-top: 15px; font-size: 0.9rem; color: #777;">
                     若您需要以拼音搜索词组，请用空格分隔音节。<br>
-                    本网站实时与最新重制的《中山韵典》纸质版内容同步，两者内容更新时间不再独立。<br>
-                    您可以搜索“凡例”以浏览《中山韵典》的《凡例》。<br>
-                    提供“默认模式”和“反查模式”两种搜索方式
+                    本网站实时与最新重制的《中山韵典》纸质版内容同步。<br>
+                    您可以搜索“凡例”以浏览《中山韵典》的《凡例》。
                 </p>
             </div>
         `;
@@ -560,56 +508,35 @@
             ? `<img src="images/${item.character.src}.png" alt="图片" class="character-img">`
             : highlightText(item.character, query, true);
 
-        let html = `
-            <div class="character-item">
-                <div class="character-header">
-                    <div class="character-title">${charHtml}</div>
-                </div>
-        `;
+        let html = `<div class="character-item"><div class="character-header"><div class="character-title">${charHtml}</div></div>`;
 
         item.pinyins.forEach((py) => {
-            html += `
-                <div class="pinyin-container">
-                    <div class="pinyin-item">
-                        <div class="pinyin-text">${highlightText(py.pinyin, query, false)}</div>
-            `;
-
+            html += `<div class="pinyin-container"><div class="pinyin-item"><div class="pinyin-text">${highlightText(py.pinyin, query, false)}</div>`;
             if (py.meanings && py.meanings.length) {
                 html += `<div class="meaning-container">`;
                 py.meanings.forEach((m) => {
-                    if (m.text) {
-                        html += `<div class="meaning-item">${highlightText(m.text, query, false)}</div>`;
-                    }
+                    if (m.text) html += `<div class="meaning-item">${highlightText(m.text, query, false)}</div>`;
                     if (m.examples && m.examples.length) {
                         html += `<div class="example-container">`;
                         m.examples.forEach((ex) => {
                             html += `<div class="example-dialect">${highlightText(ex.dialect, query, false)}</div>`;
-                            if (ex.translation) {
-                                html += `<div class="example-translation">${highlightText(ex.translation, query, false)}</div>`;
-                            }
+                            if (ex.translation) html += `<div class="example-translation">${highlightText(ex.translation, query, false)}</div>`;
                         });
                         html += `</div>`;
                     }
                 });
                 html += `</div>`;
             }
-
             if (py.entries && py.entries.length) {
                 html += `<div class="entry-container">`;
                 py.entries.forEach((e) => {
-                    html += `
-                        <div class="entry-item">
-                            <div class="entry-title">【${highlightText(e.title, query, false)}】</div>
-                            ${e.entryPinyin ? `<div class="entry-pinyin">${highlightText(e.entryPinyin, query, false)}</div>` : ''}
-                            ${e.definition ? `<div class="entry-definition">${highlightText(e.definition, query, false)}</div>` : ''}
-                    `;
+                    html += `<div class="entry-item"><div class="entry-title">【${highlightText(e.title, query, false)}】</div>`;
+                    if (e.entryPinyin) html += `<div class="entry-pinyin">${highlightText(e.entryPinyin, query, false)}</div>`;
+                    if (e.definition) html += `<div class="entry-definition">${highlightText(e.definition, query, false)}</div>`;
                     if (e.examples && e.examples.length) {
                         e.examples.forEach((ex) => {
-                            html += `<div class="example-container">`;
-                            html += `<div class="example-dialect">${highlightText(ex.dialect, query, false)}</div>`;
-                            if (ex.translation) {
-                                html += `<div class="example-translation">${highlightText(ex.translation, query, false)}</div>`;
-                            }
+                            html += `<div class="example-container"><div class="example-dialect">${highlightText(ex.dialect, query, false)}</div>`;
+                            if (ex.translation) html += `<div class="example-translation">${highlightText(ex.translation, query, false)}</div>`;
                             html += `</div>`;
                         });
                     }
@@ -617,19 +544,11 @@
                 });
                 html += `</div>`;
             }
-
             if (py.notes) {
-                html += `
-                    <div class="note-container">
-                        <div class="note-title">注意</div>
-                        <div class="note-content">${highlightText(py.notes, query, false)}</div>
-                    </div>
-                `;
+                html += `<div class="note-container"><div class="note-title">注意</div><div class="note-content">${highlightText(py.notes, query, false)}</div></div>`;
             }
-
             html += `</div></div>`;
         });
-
         html += `</div>`;
         return html;
     }
@@ -639,35 +558,19 @@
     }
 
     function displayAllEntries() {
-        currentSearchQuery = '';
         const shown = dialectDatabase.filter((item) => !isSpecialEntry(item));
-
-        const head = `
-            <div class="no-results">
-                <i class="fas fa-database"></i>
-                <h3>显示全部内容</h3>
-                <p>当前数据库中共有 ${shown.length} 个条目</p>
-                <p style="margin-top: 15px; font-size: 0.9rem; color: #777;">
-                    搜索"Every"即可显示本页面。
-                </p>
-            </div>
-        `;
+        const head = `<div class="no-results"><i class="fas fa-database"></i><h3>显示全部内容</h3><p>当前数据库中共有 ${shown.length} 个条目</p><p style="margin-top: 15px; font-size: 0.9rem; color: #777;">搜索"Every"即可显示本页面。</p></div>`;
         resultsContainer.innerHTML = head + shown.map((item) => renderEntry(item, '')).join('');
     }
 
-    /* =========================================================
-       404 / 页面切换 / 弹窗
-       ========================================================= */
     function switchTo404() {
         document.querySelector('header').style.display = 'none';
         document.querySelector('nav').style.display = 'none';
         document.querySelector('footer').style.display = 'none';
         PAGE_HOME.style.display = 'none';
         PAGE_ABOUT.style.display = 'none';
-
         grammarModal.classList.remove('show');
         inputAlertModal.classList.remove('show');
-
         page404.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         [navHome, navGrammar, navAbout].forEach((a) => a && a.classList.remove('active'));
@@ -677,57 +580,34 @@
         document.querySelector('header').style.display = 'block';
         document.querySelector('nav').style.display = 'block';
         document.querySelector('footer').style.display = 'block';
-
         PAGE_HOME.style.display = 'none';
         PAGE_ABOUT.style.display = 'none';
         page404.style.display = 'none';
         document.body.style.overflow = 'auto';
-
         if (pageId === 'home') {
             PAGE_HOME.style.display = 'block';
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } else if (pageId === 'about') {
             PAGE_ABOUT.style.display = 'block';
         }
-
         navHome.classList.toggle('active', pageId === 'home');
         navAbout.classList.toggle('active', pageId === 'about');
         navGrammar.classList.remove('active');
     }
 
-    function showModal() {
-        grammarModal.classList.add('show');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function hideModal() {
-        grammarModal.classList.remove('show');
-        document.body.style.overflow = 'auto';
-    }
+    function showModal() { grammarModal.classList.add('show'); document.body.style.overflow = 'hidden'; }
+    function hideModal() { grammarModal.classList.remove('show'); document.body.style.overflow = 'auto'; }
+    function showInputAlert(message) { inputAlertMessage.textContent = message; inputAlertModal.classList.add('show'); document.body.style.overflow = 'hidden'; }
+    function hideInputAlert() { inputAlertModal.classList.remove('show'); document.body.style.overflow = 'auto'; }
 
     /* =========================================================
        搜索入口
        ========================================================= */
     function searchDialect(query, mode) {
-        if (!query || !query.trim()) {
-            showInitialMessage();
-            return;
-        }
-
-        if (query.toLowerCase() === 'every') {
-            displayAllEntries();
-            return;
-        }
-
-        if (query.includes('腚')) {
-            switchTo404();
-            return;
-        }
-
-        if (containsInvalidChars(query)) {
-            showInputAlert('请输入汉字或拼音，不支持其他字符。');
-            return;
-        }
+        if (!query || !query.trim()) { showInitialMessage(); return; }
+        if (query.toLowerCase() === 'every') { displayAllEntries(); return; }
+        if (query.includes('腚')) { switchTo404(); return; }
+        if (containsInvalidChars(query)) { showInputAlert('请输入汉字或拼音，不支持其他字符。'); return; }
 
         currentSearchQuery = query;
 
@@ -771,46 +651,27 @@
         if (results.length) {
             displayResults(results, query);
         } else {
-            resultsContainer.innerHTML = `
-                <div class="no-results">
-                    <i class="fas fa-question-circle"></i>
-                    <h3>搜索不到结果</h3>
-                    <p>未找到与“${query}”相关的定州方言词条</p>
-                    <p>该词条可能尚未收录，不代表一定不存于定州方言。</p>
-                    <p>当前仅支持使用汉字或拼音查询。</p>
-                </div>
-            `;
+            resultsContainer.innerHTML = `<div class="no-results"><i class="fas fa-question-circle"></i><h3>搜索不到结果</h3><p>未找到与“${query}”相关的定州方言词条</p><p>该词条可能尚未收录，不代表一定不存于定州方言。</p><p>当前仅支持使用汉字或拼音查询。</p></div>`;
         }
     }
 
     /* =========================================================
        事件绑定 & 初始化
        ========================================================= */
-    searchBtn.addEventListener('click', () => {
-        searchDialect(searchInput.value.trim(), currentSearchMode);
-    });
-
-    searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            searchDialect(searchInput.value.trim(), currentSearchMode);
-        }
-    });
+    searchBtn.addEventListener('click', () => { searchDialect(searchInput.value.trim(), currentSearchMode); });
+    searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchDialect(searchInput.value.trim(), currentSearchMode); });
 
     searchModeSelect.addEventListener('change', function () {
         currentSearchMode = this.value;
         modeDescription.textContent = currentSearchMode === 'default'
             ? '默认模式：仅支持按定州方言查询。反查模式：支持按定州方言查询和通过释义反查。'
             : '反查模式：支持按定州方言查询和通过释义反查。默认模式：仅支持按定州方言查询。';
-
         const v = searchInput.value.trim();
         if (v && !v.includes('腚')) searchDialect(v, currentSearchMode);
         else showInitialMessage();
     });
 
-    const luckyPool = dialectDatabase
-        .map((e) => e.character)
-        .filter((c) => typeof c === 'string' && [...c].length === 1 && !/[\uE000-\uF8FF]/.test(c));
-
+    const luckyPool = dialectDatabase.map((e) => e.character).filter((c) => typeof c === 'string' && [...c].length === 1 && !/[\uE000-\uF8FF]/.test(c));
     function rollLucky() {
         if (!luckyPool.length) return;
         const w = luckyPool[Math.floor(Math.random() * luckyPool.length)];
@@ -833,22 +694,12 @@
     navAbout.addEventListener('click', (e) => { e.preventDefault(); switchPage('about'); });
     navGrammar.addEventListener('click', (e) => { e.preventDefault(); showModal(); });
 
-    modalConfirm.addEventListener('click', () => {
-        hideModal();
-        window.open(PDF_LINK, '_blank');
-    });
-    modalCancel.addEventListener('click', () => {
-        hideModal();
-        switchPage('home');
-    });
-    grammarModal.addEventListener('click', (e) => {
-        if (e.target === grammarModal) hideModal();
-    });
+    modalConfirm.addEventListener('click', () => { hideModal(); window.open(PDF_LINK, '_blank'); });
+    modalCancel.addEventListener('click', () => { hideModal(); switchPage('home'); });
+    grammarModal.addEventListener('click', (e) => { if (e.target === grammarModal) hideModal(); });
 
     inputAlertConfirm.addEventListener('click', hideInputAlert);
-    inputAlertModal.addEventListener('click', (e) => {
-        if (e.target === inputAlertModal) hideInputAlert();
-    });
+    inputAlertModal.addEventListener('click', (e) => { if (e.target === inputAlertModal) hideInputAlert(); });
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
