@@ -193,7 +193,7 @@
     /* =========================================================
        拼音严格匹配逻辑
        ========================================================= */
-    function isSyllableMatch(pSyl, query) {
+      function isSyllableMatch(pSyl, query) {
         let p = pSyl.toLowerCase();
         let q = query.toLowerCase();
 
@@ -209,23 +209,20 @@
             }
             return false;
         } else {
+            // 核心修复：先把拆解后的 u+两点 转成 v，再去掉声调
             const strip = (str) => {
-                return str.replace(/ü/g, 'v')
-                          .normalize('NFD')
-                          .replace(/[\u0300-\u036F]/g, '')
-                          .replace(/ɑ/g, 'a')
-                          .replace(/ɡ/g, 'g')
-                          .replace(/ŋ/g, 'ng')
-                          .replace(/ê/g, 'e');
+                let s = str.normalize('NFD').replace(/u\u0308/g, 'v').replace(/[\u0300-\u036F]/g, '');
+                return s.replace(/ɑ/g, 'a').replace(/ɡ/g, 'g').replace(/ŋ/g, 'ng').replace(/ê/g, 'e');
             };
             let pBase = strip(p);
             let qBase = strip(q);
+
             if (pBase === qBase) return true;
             if (pBase.replace(/r$/, '') === qBase) return true;
             return false;
         }
     }
-
+   
     function matchPinyinString(pinyinRaw, query) {
         if (!pinyinRaw) return false;
         const p = pinyinRaw.toLowerCase().trim();
@@ -251,7 +248,7 @@
         }
     }
 
-    function getPinyinMatchLevel(item, query) {
+       function getPinyinMatchLevel(item, query) {
         const q = query.toLowerCase().trim();
         const qHasTone = hasToneMark(query);
         
@@ -264,7 +261,11 @@
             if (q.includes(' ')) {
                 return matchPinyinString(p, q) ? 0 : 3;
             } else {
-                const strip = (str) => str.replace(/ü/g, 'v').normalize('NFD').replace(/[\u0300-\u036F]/g, '').replace(/ɑ/g, 'a').replace(/ɡ/g, 'g').replace(/ŋ/g, 'ng').replace(/ê/g, 'e');
+                // 核心修复：同上，严格区分 u 和 v
+                const strip = (str) => {
+                    let s = str.normalize('NFD').replace(/u\u0308/g, 'v').replace(/[\u0300-\u036F]/g, '');
+                    return s.replace(/ɑ/g, 'a').replace(/ɡ/g, 'g').replace(/ŋ/g, 'ng').replace(/ê/g, 'e');
+                };
                 const pSyls = p.split(/\s+/).map(syl => strip(syl));
                 const qNorm = strip(q);
                 
