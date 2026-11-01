@@ -67,14 +67,14 @@
     /* =========================================================
        工具函数
        ========================================================= */
-      function isSyllableMatch(pSyl, query) {
+       function isSyllableMatch(pSyl, query) {
         let p = pSyl.toLowerCase();
         let q = query.toLowerCase();
 
         const isStrict = /[āáǎàēéěèêūúǔùōóǒòīíǐìǖǘǚǜ\u0300-\u036F]/.test(q);
 
         if (isStrict) {
-            // 带调匹配：直接比对，区分 u 和 ü
+            // 带调匹配，严格相等
             if (p === q || canonicalTonePinyin(p) === canonicalTonePinyin(q)) {
                 if (q.includes('ê') && !p.includes('ê') && !p.includes('e\u0302')) return false;
                 return true;
@@ -84,22 +84,19 @@
             }
             return false;
         } else {
-            // 无调匹配：把 ü 统一转成 v，然后再剥去声调，这样 u 和 ü 就不会混了
-            const strip = (str) => {
-                return str.toLowerCase()
-                          .replace(/ü/g, 'v') // 关键：先把 ü 转成 v
-                          .normalize('NFD')
-                          .replace(/[\u0300-\u036F]/g, '')
-                          .replace(/ɑ/g, 'a')
-                          .replace(/ɡ/g, 'g')
-                          .replace(/ŋ/g, 'ng')
-                          .replace(/ê/g, 'e');
+            // 核心修复：无调匹配时，用 NFD 把 ü 拆开，精准转换为 v，让 u 和 ü 彻底分离
+            const normalizeForMatch = (str) => {
+                let s = str.normalize('NFD');
+                s = s.replace(/u\u0308/g, 'v'); // 把 u + 两点 替换为 v
+                s = s.replace(/[\u0300-\u036F]/g, ''); // 剥去声调
+                return s.replace(/ɑ/g, 'a').replace(/ɡ/g, 'g').replace(/ŋ/g, 'ng').replace(/ê/g, 'e');
             };
-            let pBase = strip(p);
-            let qBase = strip(q);
+            
+            let pBase = normalizeForMatch(p);
+            let qBase = normalizeForMatch(q);
 
             if (pBase === qBase) return true;
-            if (pBase.replace(/r$/, '') === qBase) return true;
+            if (pBase.replace(/r$/, '') === qBase) return true; // 儿化容错
             return false;
         }
     }
@@ -417,46 +414,40 @@
         return str;
     }
 
-           function getPinyinMatchLevel(item, query) {
-        const q = query.toLowerCase().trim();
-        const qHasTone = hasToneMark(query);
+    function buildPinyinRegex(query) {
+        // 这里用 NFC 防止把带调字符拆烂，正则才能完美高亮预组合字符
+        let normQuery = query.normalize('NFC').toLowerCase();
+        let regexParts = [];
         
-        const check = (pinyinRaw) => {
-            if (!pinyinRaw) return 3;
-            const p = pinyinRaw.toLowerCase().trim();
+        for (let i = 0; i < normQuery.length; i++) {
+            let char = normQuery[i];
             
-            if (p === q || canonicalTonePinyin(p) === canonicalTonePinyin(q)) return 0;
-            
-            if (q.includes(' ')) {
-                return matchPinyinString(p, q) ? 0 : 3;
+            if (char === 'n' && normQuery[i+1] === 'g') {
+                regexParts.push('(?:n(?:[\\u0300-\\u036F]*)[gɡ]|ŋ(?:[\\u0300-\\u036F]*))');
+                i++;
+            } else if (char === 'v' || char === 'ü') {
+                // 输入 v 或 ü 只匹配 ü 及其带调形式，绝不匹配 u
+                regexParts.push('[vüǖǘǚǜ](?:[\\u0300-\\u036F]*)');
+            } else if (char === 'u') {
+                // 输入 u 只匹配 u 及其带调形式，绝不匹配 ü
+                regexParts.push('[uūúǔù](?:[\\u0300-\\u036F]*)');
+            } else if (char === 'a' || char === 'ɑ') {
+                regexParts.push('[aɑāáǎà](?:[\\u0300-\\u036F]*)');
+            } else if (char === 'e' || char === 'ê') {
+                regexParts.push('[eēéěèê](?:[\\u0300-\\u036F]*)');
+            } else if (char === 'i') {
+                regexParts.push('[iīíǐì](?:[\\u0300-\\u036F]*)');
+            } else if (char === 'o') {
+                regexParts.push('[oōóǒò](?:[\\u0300-\\u036F]*)');
+            } else if (char === 'g' || char === 'ɡ') {
+                regexParts.push('[gɡ](?:[\\u0300-\\u036F]*)');
+            } else if (char === ' ') {
+                regexParts.push('\\s*');
             } else {
-                // 归一化：先把 ü 转 v，抹平 a/ɑ、g/ɡ，再去掉声调
-                const normalize = (s) => s.replace(/ü/g, 'v').replace(/ɑ/g, 'a').replace(/ɡ/g, 'g').replace(/ŋ/g, 'ng');
-                const pSyls = p.split(/\s+/).map(syl => normalize(syl));
-                const qNorm = normalize(q);
-                
-                if (pSyls.some(syl => {
-                    if (syl === qNorm) return true;
-                    if (!qHasTone && removeTones(syl) === removeTones(qNorm)) return true;
-                    return false;
-                })) {
-                    return 0;
-                }
-                if (pSyls.some(syl => isSyllableMatch(syl, q))) {
-                    return 1;
-                }
-            }
-            return 3;
-        };
-
-        let level = 3;
-        for (const py of item.pinyins) {
-            level = Math.min(level, check(py.pinyin));
-            for (const e of (py.entries || [])) {
-                level = Math.min(level, check(e.entryPinyin));
+                regexParts.push(char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
             }
         }
-        return level === 3 ? 2 : level;
+        return new RegExp(`(${regexParts.join('')})`, 'gi');
     }
    
     /* =========================================================
