@@ -310,7 +310,7 @@
         nodes.forEach(node => {
             const text = node.nodeValue;
             const span = document.createElement('span');
-            span.innerHTML = text.replace(/IMG:(\w+)/g, '<img src="images/$1.png" alt="图片" class="inline-img-char">');
+           span.innerHTML = text.replace(/IMG:(\w+)/g, '<img src="images/$1.png" loading="lazy" alt="图片" class="inline-img-char">');
             node.parentNode.replaceChild(span, node);
         });
     }
@@ -323,7 +323,7 @@
     function replaceImageMarkers(text, isTitle) {
         if (!text) return text;
         const cls = isTitle ? 'character-img' : 'inline-img-char';
-        return text.replace(/IMG:(\w+)/g, (m, name) => `<img src="images/${name}.png" alt="图片" class="${cls}">`);
+      (m, name) => `<img src="images/${name}.png" loading="lazy" alt="图片" class="${cls}">`);
     }
 
     /* =========================================================
@@ -506,7 +506,7 @@
 
     function renderEntry(item, query) {
         const charHtml = (typeof item.character === 'object' && item.character.type === 'img')
-            ? `<img src="images/${item.character.src}.png" alt="图片" class="character-img">`
+          ? `<img src="images/${item.character.src}.png" loading="lazy" alt="图片" class="character-img">`
             : highlightText(item.character, query, true);
 
         let html = `<div class="character-item"><div class="character-header"><div class="character-title">${charHtml}</div></div>`;
@@ -713,4 +713,23 @@
     searchInput.value = '';
     showInitialMessage();
     applyGlobalImages();
+       /* =========================================================
+       图片加载守护神：失败时自动追加时间戳重试
+       ========================================================= */
+    document.addEventListener('error', function (e) {
+        const img = e.target;
+        // 如果出错的是图片标签
+        if (img.tagName && img.tagName.toLowerCase() === 'img') {
+            // 如果还没重试过
+            if (!img.dataset.retried) {
+                img.dataset.retried = 'true';
+                // 分离原始链接和查询参数
+                const src = img.src.split('?')[0];
+                // 延迟 500ms 后加上时间戳，强制浏览器重新请求（绕过缓存和放弃策略）
+                setTimeout(() => {
+                    img.src = src + '?t=' + Date.now();
+                }, 500);
+            }
+        }
+    }, true); // 使用捕获阶段，确保能截获所有图片的 error
 })();
