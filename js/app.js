@@ -250,24 +250,23 @@
         return new RegExp(`(${regexParts.join('')})`, 'gi');
     }
    
-        function buildChineseRegex(query) {
-        // 去掉用户输入中的标点，提取纯汉字和字母（保留“儿”字）
+         function buildChineseRegex(query) {
+        // 提取纯汉字和字母（绝对不删掉“儿”）
         let cleanQuery = query.replace(/[^\p{Script=Han}a-zA-Z]/gu, '');
         if (!cleanQuery) return null;
 
         let parts = [];
         for (let char of cleanQuery) {
-            // 把用户输入的繁体转为简体
             let jiantiChar = toSimplified(char); 
-            // 把简体和原本输入的繁体合在一起
             let charsToMatch = Array.from(new Set([jiantiChar, char])).join('');
             let charClass = charsToMatch.length > 1 ? `[${charsToMatch}]` : charsToMatch;
             parts.push(charClass);
         }
         
-        // 核心：允许字与字之间出现标点符号、空格，或者单引号（为了兼容数据库里 儿' 的写法）
-        let joinStr = `(?:[，,。.！!？?；;：:、\\s'])*`;
-        let regexStr = parts.join(joinStr);
+        // 允许中间、开头、结尾出现标点、空格或单引号
+        let joinStr = `[，,。.！!？?；;：:、\\s']*`;
+        // 关键：首尾也都加上 joinStr，把“巴儿'巴儿'”最后的单引号也吃进高亮框里
+        let regexStr = joinStr + parts.join(joinStr) + joinStr;
         return new RegExp(`(${regexStr})`, 'g');
     }
 
@@ -497,12 +496,15 @@
                 if (pinyinMatch(e.entryPinyin)) return true;
 
                 if (e.title) {
+                    // 把数据库的“儿'”统一换成“儿”，方便用户不打单引号也能搜到
                     const title = e.title.replace(/儿'/g, '儿').replace(/IMG:\w+/g, '[字]');
                     const titleS = toSimplified(title);
+                    const queryS = toSimplified(query);
                     
+                    // 1. 精确包含匹配（搜“儿子”就只匹配“儿子”）
                     if (titleS.includes(queryS)) return true;
-                    if (removeErhuaFromText(titleS).includes(removeErhuaFromText(queryS))) return true;
-
+                    
+                    // 2. 剔除标点后的匹配
                     const cleanTitle = titleS.replace(/[^\p{Script=Han}a-zA-Z]/gu, '').toLowerCase();
                     const cleanQuery = queryS.replace(/[^\p{Script=Han}a-zA-Z]/gu, '').toLowerCase();
                     if (cleanQuery && cleanTitle.includes(cleanQuery)) return true;
