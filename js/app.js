@@ -1,5 +1,5 @@
 /* =========================================================
-   中山韵典在线 · 交互逻辑（完整最终版）
+   中山韵典在线 · 交互逻辑（最终完美版）
    依赖：js/database.js
    ========================================================= */
 
@@ -193,7 +193,7 @@
     /* =========================================================
        拼音严格匹配逻辑
        ========================================================= */
-      function isSyllableMatch(pSyl, query) {
+    function isSyllableMatch(pSyl, query) {
         let p = pSyl.toLowerCase();
         let q = query.toLowerCase();
 
@@ -248,7 +248,7 @@
         }
     }
 
-       function getPinyinMatchLevel(item, query) {
+    function getPinyinMatchLevel(item, query) {
         const q = query.toLowerCase().trim();
         const qHasTone = hasToneMark(query);
         
@@ -261,12 +261,12 @@
             if (q.includes(' ')) {
                 return matchPinyinString(p, q) ? 0 : 3;
             } else {
-                // 核心修复：同上，严格区分 u 和 v
                 const strip = (str) => {
                     let s = str.normalize('NFD').replace(/u\u0308/g, 'v').replace(/[\u0300-\u036F]/g, '');
                     return s.replace(/ɑ/g, 'a').replace(/ɡ/g, 'g').replace(/ŋ/g, 'ng').replace(/ê/g, 'e');
                 };
-                const pSyls = p.split(/\s+/).map(syl => strip(syl));
+                const rawSyls = p.split(/\s+/);
+                const pSyls = rawSyls.map(syl => strip(syl));
                 const qNorm = strip(q);
                 
                 if (pSyls.some(syl => {
@@ -276,7 +276,8 @@
                 })) {
                     return 0;
                 }
-                if (pSyls.some(syl => isSyllableMatch(syl, q))) {
+                // 使用原始音节进行进一步的模糊匹配
+                if (rawSyls.some(syl => isSyllableMatch(syl, q))) {
                     return 1;
                 }
             }
@@ -310,7 +311,7 @@
         nodes.forEach(node => {
             const text = node.nodeValue;
             const span = document.createElement('span');
-           span.innerHTML = text.replace(/IMG:(\w+)/g, '<img src="images/$1.png" loading="lazy" alt="图片" class="inline-img-char">');
+            span.innerHTML = text.replace(/IMG:(\w+)/g, '<img src="images/$1.png" loading="lazy" alt="图片" class="inline-img-char">');
             node.parentNode.replaceChild(span, node);
         });
     }
@@ -323,7 +324,8 @@
     function replaceImageMarkers(text, isTitle) {
         if (!text) return text;
         const cls = isTitle ? 'character-img' : 'inline-img-char';
-      (m, name) => `<img src="images/${name}.png" loading="lazy" alt="图片" class="${cls}">`);
+        // 修复了这里的语法错误，补回了 return
+        return text.replace(/IMG:(\w+)/g, (m, name) => `<img src="images/${name}.png" loading="lazy" alt="图片" class="${cls}">`);
     }
 
     /* =========================================================
@@ -506,7 +508,7 @@
 
     function renderEntry(item, query) {
         const charHtml = (typeof item.character === 'object' && item.character.type === 'img')
-          ? `<img src="images/${item.character.src}.png" loading="lazy" alt="图片" class="character-img">`
+            ? `<img src="images/${item.character.src}.png" loading="lazy" alt="图片" class="character-img">`
             : highlightText(item.character, query, true);
 
         let html = `<div class="character-item"><div class="character-header"><div class="character-title">${charHtml}</div></div>`;
@@ -713,23 +715,20 @@
     searchInput.value = '';
     showInitialMessage();
     applyGlobalImages();
-       /* =========================================================
+
+    /* =========================================================
        图片加载守护神：失败时自动追加时间戳重试
        ========================================================= */
     document.addEventListener('error', function (e) {
         const img = e.target;
-        // 如果出错的是图片标签
         if (img.tagName && img.tagName.toLowerCase() === 'img') {
-            // 如果还没重试过
             if (!img.dataset.retried) {
                 img.dataset.retried = 'true';
-                // 分离原始链接和查询参数
                 const src = img.src.split('?')[0];
-                // 延迟 500ms 后加上时间戳，强制浏览器重新请求（绕过缓存和放弃策略）
                 setTimeout(() => {
                     img.src = src + '?t=' + Date.now();
                 }, 500);
             }
         }
-    }, true); // 使用捕获阶段，确保能截获所有图片的 error
+    }, true);
 })();
