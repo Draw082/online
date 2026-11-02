@@ -663,7 +663,7 @@
         if (results.length) {
             displayResults(results, query);
         } else {
-            resultsContainer.innerHTML = `<div class="no-results"><i class="fas fa-question-circle"></i><h3>搜索不到结果</h3><p>未找到与“${query}”相关的定州方言词条</p><p>该词条可能尚未收录，不代表一定不存于定州方言。</p><p> 若您需要以拼音搜索词组，请用空格分隔音节；若您需要以拼音搜索儿化，请在原始拼音后直接加字母r。</p></div>`;
+            resultsContainer.innerHTML = `<div class="no-results"><i class="fas fa-question-circle"></i><h3>搜索不到结果</h3><p>未找到与“${query}”相关的定州方言词条</p><p>该词条可能尚未收录，不代表一定不存于定州方言。</p><p> 若您需要以拼音搜索词组，请用空格分隔音节。</p><p>若您需要以拼音搜索儿化，请在原始拼音后直接加字母r。</p></div>`;
         }
     }
 
