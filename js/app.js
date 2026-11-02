@@ -331,8 +331,9 @@
     /* =========================================================
        智能高亮
        ========================================================= */
-    function buildPinyinRegex(query) {
-        let normQuery = query.normalize('NFC').toLowerCase();
+      function buildPinyinRegex(query) {
+        // 核心修改：先把用户输入的 -r 统一转为 r，避免解析出错
+        let normQuery = query.normalize('NFC').toLowerCase().replace(/-r\b/g, 'r');
         let regexParts = [];
         
         for (let i = 0; i < normQuery.length; i++) {
@@ -355,6 +356,9 @@
                 regexParts.push('[oōóǒò](?:[\\u0300-\\u036F]*)');
             } else if (char === 'g' || char === 'ɡ') {
                 regexParts.push('[gɡ](?:[\\u0300-\\u036F]*)');
+            } else if (char === 'r') {
+                // 核心修改：如果遇到 r，允许前面带一个横杠，这样 dour 的正则会匹配 dou-r
+                regexParts.push('-?r');
             } else if (char === ' ') {
                 regexParts.push('\\s*');
             } else {
