@@ -1891,7 +1891,7 @@ window.DIALECT_DATABASE_TEXT = `
 [词条拼音]chɑ́nɡ ɡuor
 [词条释义]IMG:5 花生。
 [词条]长果豆儿'
-[词条拼音]chɑ́nɡ ɡuo dour · chɑ́nɡ ɡuo dou-r
+[词条拼音]chɑ́nɡ ɡuo dòur · chɑ́nɡ ɡuo dỏu-r
 [词条释义]IMG:5 花生仁，花生去壳后剩余的果实。
 
 [汉字]肠
