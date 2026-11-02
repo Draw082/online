@@ -364,7 +364,7 @@
         return new RegExp(`(${regexParts.join('')})`, 'gi');
     }
 
-    function buildChineseRegex(query) {
+     function buildChineseRegex(query) {
         let cleanQuery = query.replace(/[^\p{Script=Han}a-zA-Z]/gu, '');
         if (!cleanQuery) return null;
 
@@ -375,9 +375,14 @@
             let charClass = charsToMatch.length > 1 ? `[${charsToMatch}]` : charsToMatch;
             parts.push(charClass);
         }
-        let joinStr = `[，,。.！!？?；;：:、\\s']*`;
+        
+        // 核心修改：\p{P} 匹配所有标点，\p{S} 匹配所有符号，\s 匹配所有空格
+        // 这样不论词条里是括号、引号、破折号还是省略号，高亮都能直接跨过去
+        let joinStr = `[\\p{P}\\p{S}\\s']*`;
         let regexStr = joinStr + parts.join(joinStr) + joinStr;
-        return new RegExp(`(${regexStr})`, 'g');
+        
+        // 注意：这里必须加上 'u' 标志，否则 Unicode 属性不生效
+        return new RegExp(`(${regexStr})`, 'gu');
     }
 
     function highlightText(text, query, isTitle) {
